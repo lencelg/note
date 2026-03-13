@@ -23,7 +23,7 @@ Link
 * Control theory and cybernetics
 * Linguistics
 # Intelligent Agent
-![](./img/agent%20and%20environment)
+![](./img/agent%20and%20environment)<br>
 performance measure: based on consequentialism<br>
 Rational Agent
 * Omniscience(全知)
@@ -40,7 +40,7 @@ Goal-based agents|   * ![](./img/goal%20based%20agent)
 Utility-based agents|   * ![](./img/model%20and%20utlity%20based%20agent)
 learning agents|   * ![](./img/learning%20agent)
 ---
-agent programme representation
+agent programme representation<br>
 ![](./img/status%20space%20and%20trasition%20model%20representation)
 ---
 Problem-solving agent
@@ -116,10 +116,10 @@ function MIN -VALUE (game, state) returns a (utility, move) pair
     return v, move
 
 ```
-alpha-beta pruning
+alpha-beta pruning<br>
 ![](./img/Alpha%20beta%20pruning)
 ---
-Heuristic Alpha–Beta Tree Search
+Heuristic Alpha–Beta Tree Search<br>
 ![](./img/game%20heursitcs)
 * Cutting off search
     ```
@@ -127,7 +127,7 @@ Heuristic Alpha–Beta Tree Search
     ```
 * forward prunning
 ---
-Monte Carlo tree search(MCTS)
+Monte Carlo tree search(MCTS)<br>
 ![](./img/MCTS%20explaination)
 ```
 function M ONTE-C ARLO-TREE -S EARCH(state) returns an action
