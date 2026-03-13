@@ -152,3 +152,28 @@ limitation
 * based on caculating legal move(instead use `utility of node expansion`)
 * human plays diff much from machine calculation
 * the ability to incorporate machine learning
+# CONSTRAINT SATISFACTION  PROBLEMS(CSP)
+Example problem
+* Map coloring
+* Job-shop scheduling
+---
+* `Node consistency`: A single variable (corresponding to a node in the CSP graph) is node-consistent if all the
+values in the variable’s domain satisfy the variable’s unary constraints.<br>
+* `Arc consistency`: A variable in a CSP is arc-consistent1 if every value in its domain satisfies the variable’s
+binary constraints
+   ![](./img/AC-3)
+* `path-consistency`:tightens the binary constraints by using implicit constraints
+that are inferred by looking at triples of variables
+* `K-consistency`
+* `Global-constraints`
+---
+`Backtracking Search for CSPs`
+![](./img/csp%20backtracking%20search)
+---
+`Local Search for CSPs`
+![](./img/csp%20local%20search)
+---
+Structure of CSP
+* cutset conditioning
+* tree decomposition
+* value symmetry
