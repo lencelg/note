@@ -62,7 +62,7 @@ read directory
 ```
 * descriptor table 
 * open file table 
-* v-node table(shared)
+* v-node table(shared)<br>
 ![](./img/classic.png)
 ![](./img/child.png)
 ### I/O redirection
@@ -78,3 +78,59 @@ int main()
     fprintf(stdout, "Hello, Da Wang\n");
 }
 ```
+
+
+# Network Programming
+## Client-Server model
+every web application is based on `Client-Server model`<br>
+![](./img/client-server%20model)
+## Network
+web is an `I/O device` to a computer<br>
+![](./img/io%20devices)
+---
+web can be divided into three parts
+* SAN - System Area Network
+  * Switched Ethernet, Quadrics QSW, ...
+* LAN - Local Area Network
+  * Ethernet, ..
+* WAN - Wide Area Network
+  * High speed point-to-point phone lines
+---
+|network part|graph description|
+---|---
+Ethernet Segment|![](./img/Ethernet%20segment)
+Bridged Ethernet Segment|![](./img/Bridged%20Ethernet%20segment)
+internets|![](./img/internets)
+---
+two thing needed to do to transmit message
+* define internet address
+* transmission protocol
+---
+## TCP/IP
+Transmission Control Protocol/Internet Protocol
+* IP (Internet Protocal)
+    * Provides basic naming scheme and unreliable delivery capability of packets (datagrams) from host-to-host
+* UDP (Unreliable Datagram Protocol)
+    * Uses IP to provide unreliable datagram delivery from process-to-process
+* TCP (Transmission Control Protocol)
+    * Uses IP to provide reliable byte streams from process-to-process over connections
+---
+IP address(IPV4)
+```c
+/* IP address structure */
+struct in_addr {
+    uint32_t s_addr; /* Address in network byte order (big-endian) */
+};
+```
+unix provides several functions to transfer between big-endian and little-endian<br>
+
+Dotted Decimal Notation<br>
+IP address：`0x8002C2F2 = 128.2.194.242`
+### Internet domain name
+to `simplify`, people use domain name instead of ip address in usage(tranmission actually uses ip address)<br>
+![](./img/internet%20domain%20name)
+### Internet connection
+`socket pair`: *`(cliaddr: cliport, servaddr: servport)`*<br>
+![](./img/internet%20connection)
+## Socket Interface
+socket interface is `a set functions combined with unix i/o functions` to create web applications
