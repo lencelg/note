@@ -14,6 +14,7 @@
 Random-restart: conduct hill climbing multiple times. Each time, start from a random state. Compare the maxima from every trial, and choose the highest amongst those.
     * Local Beam Search: chooses the k highest-valued neighbors. This is unlike most local search algorithms in that it uses multiple nodes for the search, and not just one.
 ## Simulated Annealing
+```
 function Simulated-Annealing(problem, max):
     current = initial state of problem
     for t = 1 to max:
@@ -24,12 +25,12 @@ function Simulated-Annealing(problem, max):
             current = neighbor
         with probability e^(ΔE/T) set current = neighbor
     return current
-
+```
 ## Linear Programming
 ## Constraint Satisfaction
 * Node Consistency
 * Arc Consistency
-
+```
 function Revise(csp, X, Y):
     revised = false
     for x in X.domain:
@@ -37,7 +38,8 @@ function Revise(csp, X, Y):
             delete x from X.domain
             revised = true
     return revised
-
+```
+```
 function AC-3(csp):
     queue = all arcs in csp
     while queue non-empty:
@@ -48,8 +50,9 @@ function AC-3(csp):
             for each Z in X.neighbors - {Y}:
                 Enqueue(queue, (Z,X))
     return true
-
+```
 ## Backtracking Search
+```
 function Backtrack(assignment, csp):
     if assignment complete:
         return assignment
@@ -62,9 +65,10 @@ function Backtrack(assignment, csp):
                     return result
             remove {var = value} from assignment
     return failure
-
+```
 
 ### Inference
+```
 function Backtrack(assignment, csp):
     if assignment complete:
         return assignment
@@ -78,5 +82,6 @@ function Backtrack(assignment, csp):
             result = Backtrack(assignment, csp)
         if result ≠ failure:
             return result
+```
         remove {var = value} and inferences from assignment
     return failure
