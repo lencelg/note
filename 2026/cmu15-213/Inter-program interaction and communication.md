@@ -81,6 +81,7 @@ int main()
 
 
 # Network Programming
+![](./img/network%20overview.png)
 ## Client-Server model
 every web application is based on `Client-Server model`<br>
 ![](./img/client-server%20model)
@@ -127,10 +128,257 @@ unix provides several functions to transfer between big-endian and little-endian
 Dotted Decimal Notation<br>
 IP address：`0x8002C2F2 = 128.2.194.242`
 ### Internet domain name
+Domain Naming System(DNS): maintain mapping between ip address and domain in database called DNS<br>
 to `simplify`, people use domain name instead of ip address in usage(tranmission actually uses ip address)<br>
 ![](./img/internet%20domain%20name)
 ### Internet connection
 `socket pair`: *`(cliaddr: cliport, servaddr: servport)`*<br>
+the idea of port is to indentify different services<br>
 ![](./img/internet%20connection)
+![](./img/port_server)
 ## Socket Interface
 socket interface is `a set functions combined with unix i/o functions` to create web applications
+```c
+/* IP socket address structure */
+struct sockaddr_in {
+uint16_t sin_family; /* Protocol family (always AF _INET) */
+uint16_t sin_port; /* Port number in network byte order */
+struct in_addr sin_addr; /* IP address in network byte order */
+unsigned char sin_zero[8]; /* Pad to sizeof(struct sockaddr) */
+};
+/* Generic socket address structure (for connect, bind, and accept) */
+struct sockaddr {
+uint16_t sa_family; /* Protocol family */
+char sa_data[14]; /* Address data */
+};
+```
+## Server overview
+![](./img/server_overview)
+---
+`open_clientfd`: wrapped function to connect to a server
+```c
+int open_clientfd(char *hostname, char *port) {
+    int clientfd;
+    struct addrinfo hints, *listp, *p;
+    
+    // Get a list of potential server address
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_socktype = SOCK_STREAM; // Open a connection
+    hints.ai_flags = AI_NUMERICSERV; // using numeric port arguments
+    hints.ai_flags |= AI_ADDRCONFIG; // Recommended for connections
+    getaddrinfo(hostname, port, &hints, &listp);
+    
+    // Walk the list for one that we can successfully connect to
+    // 如果全部都失败，才最终返回失败（可能有多个地址）
+    for (p = listp; p; p = p->ai_next) {
+        // Create a socket descriptor
+        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关
+        if ((clientfd = socket(p->ai_family, p->ai_socktype,
+                               p->ai_protocol)) < 0)
+            continue; // Socket failed, try the next
+        
+        // Connect to the server
+        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关
+        if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1)
+            break; // Success
+        
+        close(clientfd); // Connect failed, try another
+    }
+    
+    // Clean up
+    freeaddrinfo(listp);
+    if (!p) // All connections failed
+        return -1;
+    else // The last connect succeeded
+        return clientfd;
+}
+```
+`open_listenfd`: create `listening descriptor`, accept request from client
+```c
+int open_listenfd(char *port){
+    struct addrinfo hints, *listp, *p;
+    int listenfd, optval=1;
+    
+    // Get a list of potential server addresses
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_socktype = SOCK_STREAM; // Accept connection
+    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; // on any IP address
+    hints.ai_flags |= AI_NUMERICSERV; // using port number
+    // 因为服务器不需要连接，所以原来填写地址的地方直接是 NULL
+    getaddrinfo(NULL, port, &hints, &listp); 
+    
+    // Walk the list for one that we can successfully connect to
+    // 如果全部都失败，才最终返回失败（可能有多个地址）
+    for (p = listp; p; p = p->ai_next) {
+        // Create a socket descriptor
+        // 这里使用从 getaddrinfo 中得到的参数，实现协议无关
+        if ((listenfd = socket(p->ai_family, p->ai_socktype,
+                               p->ai_protocol)) < 0)
+            continue; // Socket failed, try the next
+        
+        // Eliminates "Address already in use" error from bind
+        setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR), 
+                    (const void *)&optval, sizeof(int));
+        
+        // Bind the descriptor to the address
+        if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
+            break; // Success
+        
+        close(listenfd); // Bind failed, try another
+    }
+    
+    // Clean up
+    freeaddrinfo(listp);
+    if (!p) // No address worked
+        return -1;
+    
+    // Make it a listening socket ready to accept connection requests
+    if (listen(listenfd, LISTENQ) < 0) {
+        close(listenfd);
+        return -1;
+    }
+    return listenfd;
+}
+```
+### Example Socket Server
+`echo server`
+```c
+// echoserveri.c
+#include "csapp.h"
+void echo(int connfd);
+
+int main(int argc, char **argv){
+    int listenfd, connfd;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr; // Enough room for any addr
+    char client_hostname[MAXLINE], client_port[MAXLINE];
+    
+    // 开启监听端口，注意只开这么一次
+    listenfd = Open_listenfd(argv[1]);
+    while (1) {
+        // 需要具体的大小
+        clientlen = sizeof(struct sockaddr_storage); // Important!
+        // 等待连接
+        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        // 获取客户端相关信息
+        Getnameinfo((SA *) &clientaddr, clientlen, client_hostname,
+                     MAXLINE, client_port, MAXLINE, 0);
+        printf("Connected to (%s, %s)\n", client_hostname, client_port);
+        // 服务器具体完成的工作
+        echo(coonfd);
+        Close(connfd);
+    }
+    exit(0);
+}
+
+void echo(int connfd) {
+    size_t n;
+    char buf[MAXLINE];
+    rio_t rio;
+    
+    // 读取从客户端传输过来的数据
+    Rio_readinitb(&rio, connfd);
+    while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0) {
+        printf("server received %d bytes\n", (int)n);
+        // 把从 client 接收到的信息再写回去
+        Rio_writen(connfd, buf, n);
+    }
+}
+```
+## Web Server
+HTTP(Hypertext Transfer Protocol): use between web client and server
+* static content
+* dynamic content
+
+# Concurrent Programming
+three ways to create concurrent programme
+* process(IPC)
+* I/O multiplexing
+* threads
+---
+![](./img/concurrent.png)
+## Process
+A `separate process` is used for each client, and the process only starts in `parallel` after a connection is established, while the connection establishment is still `serial`.<br>
+```c
+void sigchld_handler(int sig){
+    while (waitpid(-1, 0, WNOHANG) > 0)
+        ;
+    return;
+    // Reap all zombie children
+}
+
+int main(int argc, char **argv) {
+    int listenfd, connfd;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr;
+    
+    Signal(SIGCHLD, sigchld_handler);
+    listenfd = Open_listenfd(argv[1]);
+    while (1) {
+        clientlen = sizeof(struct sockaddr_storage);
+        connfd = Accept(listenfd, (SA *) &clientaddr, &clientlen);
+        if (Fork() == 0) {
+            Close(listenfd); // Child closes its listening socket
+            echo(connfd); // Child services client
+            Close(connfd); // Child closes connection with client
+            exit(0); // Child exits
+        }
+        Close(connfd); // Parent closes connected socket (important!)
+    }
+}
+```
+each process has it's own virtual memory, but must use IPC and tends to be slow
+## I/O Multiplexing
+`event-driven` programme<br>
+views
+* more control on events compared to process
+* complex code needed
+* easy to be attacked
+## Thread
+below description from [小土刀](https://www.wdxtub.com/blog/csapp/thin-csapp-9)<br>
+```
+和基于进程的方法非常相似，唯一的区别是这里用线程。进程其实是比较『重』的，一个进程包括进程上下文、代码、数据和栈。如果从线程的角度来描述，一个进程则包括线程、代码、数据和上下文。也就是说，线程作为单独可执行的部分，被抽离出来了，一个进程可以有多个线程。
+
+每个线程有自己的线程 id，有自己的逻辑控制流，也有自己的用来保存局部变量的栈（其他线程可以修改）但是会共享所有的代码、数据以及内核上下文。
+
+和进程不同的是，线程没有一个明确的树状结构（使用 fork 是有明确父进程子进程区分的）。和进程中『并行』的概念一样，如果两个线程的控制流在时间上有『重叠』（或者说有交叉），那么就是并行的。
+
+进程和线程的差别已经被说了太多次，这里简单提一下。相同点在于，它们都有自己的逻辑控制流，可以并行，都需要进行上下文切换。不同点在于，线程共享代码和数据（进程通常不会），线程开销比较小（创建和回收）
+```
+### POSIX Threads
+POSIX is library for threads in `c` language
+```c
+#include "csapp.h"
+void echo (int connfd);
+void *thread(void *vargp);
+int main(int argc, char **argv)
+{
+    int listenfd, *connfdp;
+    socklen_t clientlen;
+    struct sockaddr_storage clientaddr;
+    pthread_t tid;
+    
+    if (argc != 2) {
+    fprintf (stderr, "usage: %s <port>\n", argv [0]);
+    exit (0);
+    }
+    listenfd = Open_listenfd(argv [1]);
+    
+    while (1) {
+        clientlen=sizeof(struct sockaddr_storage);
+        connfdp = Malloc (sizeof (int));
+        *connfdp = Accept(listenfd, (SA *) &clientaddr, &clientlen);
+        Pthread_create(&tid, NULL, thread, connfdp);
+    }
+} 
+/* Thread routine */
+void *thread (void *vargp)
+{
+    int connfd = *((int *)vargp);
+    Pthread_detach(pthread_self ());
+    Free(vargp);
+    echo(connfd);
+    Close(connfd);
+    return NULL;
+}
+```
