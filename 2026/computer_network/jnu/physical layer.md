@@ -72,7 +72,7 @@ Radio Waves
 * FDM(Frequency Division Multiplexing)
 * TDM(Time Division Multiplexing)
 * STDM(static TDM)
-![](./img/STDM)
+  - ![](./img/STDM)
 * WDM(Wavelength Division Multiplexing) and DWDM(Dense Wavelength Division Multiplexing)
 * CDM(Code Division Multiplexing)
 ## Broadband Access Technology
@@ -81,6 +81,7 @@ Radio Waves
 ASDL
 
 ![](./img/ASDL)
+
 HFC
 
 ![](./img/HFC)
