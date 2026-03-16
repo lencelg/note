@@ -39,8 +39,10 @@ Oragnization of PCB
 * linking
 * indexing
 ---
-kernal status<br>
-user status<br>
+
+kernal status
+user status
+    
 ---
 Creation of process
 * get empty PCB, get unique ID for new process
