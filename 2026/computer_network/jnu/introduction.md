@@ -43,7 +43,7 @@ classify by user
 * bandwidth
 * throughaut
 * delgy
-    ![](./img/delay)
+    - ![](./img/delay)
 * bandwidth-delay product
 * RIT(Raund-Tnip Time Utilization rate)
 * Utilization rate
