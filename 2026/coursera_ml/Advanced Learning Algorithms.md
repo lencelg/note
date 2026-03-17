@@ -132,6 +132,6 @@ $$R = \frac{TP}{TP+FN}$$
 $$F1 = \frac{2PR}{P+R}$$
 ## Other advice
 * use `learning curve` to help choose the data
-* `transfer learning`
+* `transfer learning` when you have small set of data
 
 # Decision trees
