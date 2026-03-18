@@ -82,15 +82,24 @@ $\sigma_i$ = $Variance(x_i)$ = $E[(x_i-\mu_i)^2]$
 ### Normal Equation
 reference note from [here](https://github.com/bighuang624/Andrew-Ng-Machine-Learning-notes/blob/master/docs/week2.md)<br>
 > 把数据集表示为矩阵
+>
 > $$X = \left( \begin{matrix} x_{11} & x_{12} & \cdots & x_{1d} & 1 \\\ x_{21} & x_{22} & \cdots & x_{2d} & 1 \\\ \vdots & \vdots & \ddots & \vdots & \vdots \\\ x_{m1} & x_{m2} & \cdots & x_{md} & 1 \\\ \end{matrix} \right) = \left( \begin{matrix} x_{1}^T & 1 \\\ x_{2}^T & 1 \\\ \vdots & \vdots \\\ x_{m}^T & 1 \\\ \end{matrix} \right)$$
+>
 > 同时将标签也写成向量形式
+>
 > $$y = (y_1;y_2;...;y_m)$$
+>
 > 由均方误差最小化，可得
+>
 > $$\theta^* = arg_{\theta}min(y-X\theta)^T(y-X\theta)$$
+>
 > 其中，$\theta^*$表示 $\theta$ 的解。
 > 令
+>
 > $$E_{\theta} = (y-X\theta)^T(y-X\theta)$$
+>
 > 对 $\theta$ 求导得到
+>
 > $$
 > \begin{equation}
 > \begin{split}
@@ -99,11 +108,17 @@ reference note from [here](https://github.com/bighuang624/Andrew-Ng-Machine-Lear
 > \end{split}
 > \end{equation}
 > $$
+>
 > 令上式为 0，有
+>
 > $$2X^T(X\theta - y) = 0$$
+>
 > $$X^TX\theta = X^Ty$$
+>
 > 最终得到
+>
 > $$\theta = (X^TX)^{-1}X^Ty$$
+>
 > 当 $X^TX$ 不为满秩矩阵（不可逆）时，可解出多个 $\theta$ 使均方误差最小化。因此将由学习算法的归纳偏好来决定选择哪一个解作为输出，常见的做法就是引入正则化项。
 > 正规方程方法中，无需做特征缩放。两种方法的对比如下：
 > | 梯度下降 | 正规方程 |

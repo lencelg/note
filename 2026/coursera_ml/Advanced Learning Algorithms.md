@@ -135,3 +135,25 @@ $$F1 = \frac{2PR}{P+R}$$
 * `transfer learning` when you have small set of data
 
 # Decision trees
+![](./img/decision%20tree)
+
+`Entropy`: a meansure of inpurity
+
+$p_0$: fraction of something
+
+$$p_0 = 1 - p_1$$
+
+$$ H(p_1) = -p_1log_2(p_1) - p_0log_2(p_0) =-p_1log_2(p_1) - (1 - p_1)log_2(1 -p_1) $$
+
+![](./img/decision%20tree%20learning)
+
+## One-Hot encoding
+`used` for `multiple discrete features` or `splitting continuous variable`
+## tree ensemble
+Trees are highly `sensetive` to `small changes` of the data, so use mulitple trees
+
+![](./img/tree%20ensemble)
+## Random forest
+![](./img/random%20forest%20algorithm)
+### XGBOOST
+![](./img/XGBOOST%20introduciton)
