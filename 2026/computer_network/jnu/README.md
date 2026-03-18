@@ -1,3 +1,5 @@
+`notice : no update for current dir, refer note from previous dir`
+
 this is a chinese markdown note
 
 |topic|
