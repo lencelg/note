@@ -349,3 +349,31 @@ $$\theta_j :=\theta_j - \alpha \frac{1}{m}\sum^m_{i=1}(h_{\theta}(x^{(i)}) - y^{
 ### MapReduce
 
 MapReduce 指均分训练集，将每个子集分发给一台主机并行计算，最后结果汇总到一台机器，以加快计算速度。只要学习算法可以表示成一系列的求和形式，或者表示成在训练集上对函数的求和形式，就可以使用 MapReduce 技巧。把主机换成多核 CPU 的每个核同理。
+
+# Reinforcement learning
+
+Mars Rover exmaple
+
+![](./img/reinforcement%20learning%20example)
+
+## Concept
+
+![](./img/reinforcement%20concept)
+
+`State-action value function`
+```
+Q(s, a) = Return if you 
+            * start in state s
+            * take action a(once)
+            * then behave optimally after that
+```
+
+## Bellman equation
+ 
+![](./img/bellman%20equation)
+
+![](./img/explanation%20of%20bellman%20equation)
+
+because the environment is `random`, action may fail, `introduce probobility` to algorithm
+
+![](./img/greedy%20police)
