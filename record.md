@@ -6,3 +6,4 @@ Useless record
 * cs50ai
 * cs61a
 * data100
+* coursera-machine-learning
