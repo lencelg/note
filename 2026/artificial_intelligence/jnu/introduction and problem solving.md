@@ -23,7 +23,9 @@ Link
 * Control theory and cybernetics
 * Linguistics
 # Intelligent Agent
-![](./img/agent%20and%20environment)<br>
+
+![](./img/agent%20and%20environment)
+
 performance measure: based on consequentialism<br>
 Rational Agent
 * Omniscience(全知)
@@ -31,7 +33,9 @@ Rational Agent
 * learn
 ---
 environment property<br>
+
 $$agent = architecture + program$$
+
 agent program|description|
 ---|---
 | Simple reflex agents|![](./img/simple%20reflex%20agent)
@@ -87,7 +91,6 @@ Algorithm
 * iterative A\* Search
 * recursive best-first search
 # Complex Search
-refer [note from cs50_ai](../../cs50_ai/optimization.md)
 ---
 # Adversarial search and Game
 MiniMax Search 
