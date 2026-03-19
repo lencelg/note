@@ -52,7 +52,9 @@ benchmark
 ![](./img/tow's%20complement%20second)
 
 `三种类型的关系`
+
 ![](./img/interger%20relationship%20example)
+
 ```
 一个正整数，当用原码、反码、补码表示时，符号位都固定为 0，用二进制表示的数位
 值都相同，即三种表示方法完全一样。
@@ -101,3 +103,90 @@ IEEE744的补充说明
 奇校验与偶校验
 
 ![](./img/crc)
+
+补码加法
+
+$$ [x+y]_补=[x]_补+[y]_补 (mod 2^{n+1}) $$
+
+补码减法
+
+$$[x–y]_补 = [x＋(–y)]_补 = [x]_补+[–y]_补 $$
+
+$$[–y]_补 = ~[y]_补 + 1$$
+
+overflow
+
+![](./img/interger%20overflow)
+
+### 整数乘法
+
+#### 无符号数阵列乘法器
+
+![](./img/interger%20multiplcation)
+![](./img/interger%20multipulication%20road)
+
+#### 有符号数阵列乘法器
+
+![](./img/signed%20interger%20multipulication%20)
+
+## 定点除法运算
+
+![](./img/division)
+![](./img/division%20example)
+
+## 逻辑运算
+* 逻辑与
+* 逻辑非
+* 逻辑或
+* 逻辑异或
+
+## ALU
+![](./img/ALU)
+
+## 总线
+内部总线是指 CPU 内各部件的连线，而外部总线是指系统总线，即 CPU 与存储器、 I/O 系统之间的连线。
+
+![](./img/ALU%20architecture)
+
+# 存储系统
+![](./img/cache)
+
+储存器分类
+* RAM
+  * SRAM
+  * DRAM
+* ROM
+* PROM
+* EPROM
+* Flash
+
+大小端
+
+！[](./img/endian)
+
+## Performance
+* 储存容量
+* 存取时间
+* 存储周期
+* 储存器带宽
+
+## SRAM
+![](./img/SDRAM)
+![](./img/SRAM%20detail)
+
+## 存储器容量的扩充
+* 位扩展
+* 字扩展
+* 字位扩展
+
+## DRAM
+![](./img/DRAM)
+
+刷新操作
+* 集中式刷新策略: 每一个刷新周期中集中一段时间对 DRAM 的所有行进行刷新
+* 分散式刷新策略: 每一行的刷新操作被均匀地分配到刷新周期时间内
+
+## 同步DRAM(SDRAM)
+传统的 DRAM 是`异步`工作的, 在 DRAM 接口上增加时钟信号则可以降低存储器芯片与控制器同步的开销，优化 DRAM 与 CPU 之间的接口，这是`同步`DRAM(SDRAM)的最主要改进
+
+![](./img/DRAM%20difference)
