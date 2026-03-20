@@ -4,23 +4,24 @@ PS: readed from 算法设计与分析（第2版） and ppt from lecture
 ## Introduction
 ### big O notation
 |meansurement|description|
----|---
-$\mathcal{\Theta}(n)$|upper bound of algorithm
-$\mathcal{\Omega}(n)$|lower bound of algorithm
-$\mathcal{O}(n)$| approximate size of a function on a domain
+|---|---|
+|$\mathcal{\Theta}(n)$|upper bound of algorithm|
+|$\mathcal{\Omega}(n)$|lower bound of algorithm|
+|$\mathcal{O}(n)$| approximate size of a function on a domain|
 ### STL
 |data structure| header|
 |---|---|
-vector| \<vector>
-string| \<string>
-deque| \<deque>
-list| \<list>
-stack| \<stack>
-priority_queue| \<queue>
-set/mutilset| \<set>
-map/mutilmap| \<map>
-unordered_map| \<unordered_map>
-unordered_set| \<unordered_set>
+|vector| vector|
+|string| string|
+|deque| deque|
+|list| list|
+|stack| stack|
+|priority_queue| queue|
+|set/mutilset| set>|
+|map/mutilmap| map>|
+|unordered_map|unordered_map|
+|unordered_set|unordered_set|
+
 ---
 `rbegin()` and `rend()` for reverse iterator<br>
 ```c++
