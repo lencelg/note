@@ -265,10 +265,10 @@ $$ i = j mod m $$
 
 ### cache 的写操作策略
 |type|description|
----|---
-写回法(write back, copy back)|当 CPU 写 cache 命中时，只修改 cache 的内容，而不立即写入主存
-全写法(write through)|当写 cache 命中时， cache 与主存同时发生写修改，因而较好地维护了 cache 与主存的内容的一致性
-写一次法(write once)|写一次法是基于写回法并结合全写法的写策略：写命中与写未命中的处理方法和写回 法基本相同，只是第一次写命中时要同时写入主存
+|---|---|
+|写回法(write back, copy back)|当 CPU 写 cache 命中时，只修改 cache 的内容，而不立即写入主存|
+|全写法(write through)|当写 cache 命中时， cache 与主存同时发生写修改，因而较好地维护了 cache 与主存的内容的一致性|
+|写一次法(write once)|写一次法是基于写回法并结合全写法的写策略：写命中与写未命中的处理方法和写回 法基本相同，只是第一次写命中时要同时写入主存|
 
 ---
 使用多级 cache 减少缺失损失
