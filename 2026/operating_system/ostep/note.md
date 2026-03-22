@@ -106,3 +106,240 @@ int main(int argc, char *argv[])
     return 0;
 }
 ```
+## process
+process is an instance of programme
+
+### process api
+process api can be divided into `several types`
+* `create`: 操作系统必须包含一些创建新进程的方法。在 shell 中键入命令或双击应用程序图标时，会调用操作系统来创建新进程，运行指定的程序。
+* `destory`: 由于存在创建进程的接口，因此系统还提供了一个强制销毁进程的接口。当然，很多进程会在运行完成后自行退出。但是，如果它们不退出， 用户可能希望终止它们，因此停止失控进程的接口非常有用。
+* `wait`: 有时等待进程停止运行是有用的，因此经常提供某种等待接口。
+* `miscellaneous` control: 除了杀死或等待进程外，有时还可能有其他控制。例如，大多数操作系统提供某种方法来暂停进程（停止运行一段时间），
+然后恢复（继续运行）。
+* `statu`: 通常也有一些接口可以获得有关进程的状态信息，例如运行了多长时间，或者处于什么状态。
+
+#### fork()
+`fork()` create a child process
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int main(int argc, char *argv[])
+{
+    printf("hello world (pid:%d)\n", (int) getpid());
+    int rc = fork();
+    if (rc < 0) {
+    // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { // child (new process)
+        printf("hello, I am child (pid:%d)\n", (int) getpid());
+    } else {
+    // parent goes down this path (main)
+        printf("hello, I am parent of %d (pid:%d)\n", rc, (int) getpid()); 
+    }
+    return 0;
+}
+```
+output as follow
+```console
+prompt> ./p1
+hello world (pid:29146)
+hello, I am parent of 29147 (pid:29146)
+hello, I am child (pid:29147)
+prompt>
+```
+#### wait()
+`wait()` wait for a process ends, similar api like `waitpid()`
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int main(int argc, char *argv[])
+{
+    printf("hello world (pid:%d)\n", (int) getpid());
+    int rc = fork();
+    if (rc < 0) {
+        // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { // child (new process)
+        printf("hello, I am child (pid:%d)\n", (int) getpid());
+    } else {
+        // parent goes down this path (main)
+        int wc = wait(NULL);
+        printf("hello, I am parent of %d (pid:%d)\n", rc, (int) getpid()); 
+    }
+    return 0;
+}
+```
+```console
+prompt> ./p1
+hello world (pid:29146)
+hello, I am parent of 29147 (pid:29146)
+hello, I am child (pid:29147)
+prompt>
+```
+#### exec()
+`exec()` can execute other programme, `never return`
+
+the following programme execute `wc(word count)` programme
+```c
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <string.h>
+ #include <sys/wait.h>
+ int main(int argc, char *argv[])
+ {
+    printf("hello world (pid:%d)\n", (int) getpid());
+    int rc = fork();
+    if (rc < 0) {
+        // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { 
+        // child (new process)
+        printf("hello, I am child (pid:%d)\n", (int) getpid());
+        char *myargs[3];
+        myargs[0] = strdup("wc");           // program: "wc" (word count)
+        myargs[1] = strdup("p3.c");         // argument: file to count
+        myargs[2] = NULL;                   // marks end of array
+        execvp(myargs[0], myargs);          // runs word count
+        printf("this shouldn't print out");
+    } else {
+        // parent goes down this path (main)
+        int wc = wait(NULL);
+        printf("hello, I am parent of %d (wc:%d) (pid:%d)\n", rc, wc, (int) getpid());
+    }
+    return 0;
+ }
+
+```
+```console
+prompt> ./p3
+hello world (pid:29383)
+hello, I am child (pid:29384)
+29 107 1030 p3.c
+hello, I am parent of 29384 (wc:29384) (pid:29383)
+prompt>
+```
+### process status
+![](./img/process%20status)
+* `running`：在运行状态下，进程正在处理器上运行。这意味着它正在执行
+指令。
+* `ready`：在就绪状态下，进程已准备好运行，但由于某种原因，操作系统
+选择不在此时运行。
+* `blocked`：在阻塞状态下，一个进程执行了某种操作，直到发生其他事件
+时才会准备运行。一个常见的例子是，当进程向磁盘发起 I/O 请求时，它会被阻塞，
+因此其他进程可以使用处理器。
+
+### process infomation
+在上下文切换(context switch)中，我们需要知道一个进程的信息，通常使用`数据结构`来记录
+
+`example`: `xv6 proc struct`
+```c
+// the registers xv6 will save and restore
+// to stop and subsequently restart a process
+struct context {
+    int eip;
+    int esp;
+    int ebx;
+    int ecx;
+    int edx;
+    int esi;
+    int edi;
+    int ebp;
+};
+// the different states a process can be in
+enum proc_state { UNUSED, EMBRYO, SLEEPING,
+RUNNABLE, RUNNING, ZOMBIE };
+// the information xv6 tracks about each process
+// including its register context and state
+struct proc {
+    char *mem;                  // Start of process memory
+    uint sz;                    // Size of process memory
+    char *kstack;               // Bottom of kernel stack
+                                // for this process
+    enum proc_state state;      // Process state
+    int pid;                    // Process ID
+    struct proc *parent;        // Parent process
+    void *chan;                 // If non-zero, sleeping on chan
+    int killed;                 // If non-zero, have been killed
+    struct file *ofile[NOFILE]; // Open files
+    struct inode *cwd;          // Current directory
+    struct context context;     // Switch here to run process
+    struct trapframe *tf;       // Trap frame for the
+                                // current interrupt
+};
+```
+### processs mechanism
+two basic problem
+* limited operation
+* context switch
+#### limited operation
+simple idea: 受限直接执行 
+
+![](./img/direct%20run)
+
+but leads to problem, 如果进程希望执行某种受限操作（如向磁盘发出 I/O 请求或获得更多系统资源（如 CPU 或内存））
+
+define running mode
+* user mode
+* kernel mode
+
+imporved version as follow
+![](./img/limited%20running%20protocol)
+#### context switch
+`协作方式：等待系统调用`
+
+操作系统相信系统的
+进程会合理运行。运行时间过长的进程被假定会定期放弃 CPU，以便操作系统可以决定运
+行其他任务。
+
+这种情形下考虑进程执行非法指令， 容易引发安全问题
+
+---
+`非协作方式：操作系统进行控制`
+
+时钟中断（timer interrupt）
+。时钟设备可以编程为每隔几毫秒产生一次中断。产生中断时，当前正在运行的进
+程停止，操作系统中预先配置的中断处理程序（interrupt handler）会运行。此时，操作系统
+重新获得 CPU 的控制权，因此可以做它想做的事：停止当前进程，并启动另一个进程。
+
+##### 保存和恢复上下文
+`scheduler` decide when to switch to anther process
+
+![](./img/time%20interrupt%20version%20of%20process%20mechanism)
+
+the following `asm code` show the `context switch in xv6 `
+```mips
+# void swtch(struct context **old, struct context *new);
+#
+# Save current register context in old
+# and then load register context from new.
+.globl swtch
+swtch:
+    # Save old registers
+    movl 4(%esp), %eax      # put old ptr into eax
+    popl 0(%eax)            # save the old IP
+    movl %esp, 4(%eax)      # and stack
+    movl %ebx, 8(%eax)      # and other registers
+    movl %ecx, 12(%eax)
+    movl %edx, 16(%eax)
+    movl %esi, 20(%eax)
+    movl %edi, 24(%eax)
+    movl %ebp, 28(%eax)
+
+    # Load new registers
+    movl 4(%esp), %eax      # put new ptr into eax
+    movl 28(%eax), %ebp     # restore other registers
+    movl 24(%eax), %edi
+    movl 20(%eax), %esi
+    movl 16(%eax), %edx
+    movl 12(%eax), %ecx
+    movl 8(%eax), %ebx
+    movl 4(%eax), %esp      # stack is switched here
+    pushl 0(%eax)           # return addr put in place
+    ret                     # finally return into new ctxt
+```
