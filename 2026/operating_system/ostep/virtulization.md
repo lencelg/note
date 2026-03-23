@@ -1,111 +1,4 @@
-# Introduction
-## virtualization
-the following programme allocated memory and print it out
-```c
- #include <unistd.h>
- #include <stdio.h>
- #include <stdlib.h>
- #include "common.h"
- int main(int argc, char *argv[])
- {
-    int *p = malloc(sizeof(int));
-    assert(p != NULL);
-    printf("(%d) memory address of p: %08x\n",
-    getpid(), (unsigned) p);
-    *p = 0;
-    while (1) {
-    Spin(1);
-    *p = *p + 1;
-    printf("(%d) p: %d\n", getpid(), *p);
-    return 0;
- }
-```
-the following is output
-```console
-prompt> ./mem &; ./mem &
-[1] 24113
-[2] 24114
-(24113) memory address of p: 00200000
-(24114) memory address of p: 00200000
-(24113) p: 1
-(24114) p: 1
-(24114) p: 2
-(24113) p: 2
-(24113) p: 3
-(24114) p: 3
-(24113) p: 4
-(24114) p: 4
-...
-```
-每个进程访问自己的私有虚拟地址空间（virtual address space）（有时称为地址空间，address space）， 操作系统以某种方式映射到机器的物理内存上。一个正在运行的程序中的内存引用不会影响其他进程（或操作系统本身）的地址空间。对于正在运行的程序，它完全拥有自己的物理内存。但实际情况是，物理内存是由操作系统操理的共享资源。
-## concurrency
-the following programme create thread
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include "common.h"
-volatile int counter = 0;
-int loops;
-void *worker(void *arg) {
-    int i;
-    for (i = 0; i < loops; i++) {
-        counter++;
-    }
-    return NULL;
-}
-int main(int argc, char *argv[])
-{
-    if (argc != 2) {
-        fprintf(stderr, "usage: threads <value>\n");
-        exit(1);
-    }
-    loops = atoi(argv[1]);
-    pthread_t p1, p2;
-    printf("Initial value : %d\n", counter);
-    Pthread_create(&p1, NULL, worker, NULL);
-    Pthread_create(&p2, NULL, worker, NULL);
-    Pthread_join(p1, NULL);
-    Pthread_join(p2, NULL);
-    printf("Final value : %d\n", counter);
-    return 0;
-}
-```
-the following is output
-```console
-prompt> gcc -o thread thread.c -Wall -pthread
-prompt> ./thread 1000
-Initial value : 0
-Final value : 2000
-prompt> ./thread 100000
-Initial value : 0
-Final value : 143012 // huh??
-prompt> ./thread 100000
-Initial value : 0
-Final value : 137298 // what the??
-```
-这些奇怪的、不寻常的结果与指令如何执行有关，指令每一执行一条。遗憾的是，上面的程序中的关键部分是增加共享计数器的地方，它需要`3条指令`：一条将计数器的值从内存加载到寄存器，一条将其递增，一条将其保存回内存。因为这3条指令不是以`原子方式（atomically）执行（所有的指令一一性执行）`的，所以奇怪的事情可能会发生。这是一种并发（concurrency）问题
-##  persistence
-在系统内存中，数据容易丢失，因为像 DRAM 这样的设备以易失（volatile）的方式存储数值。如果断电或系统崩溃，那么内存中的所有数据都会丢失。因此，我们需要硬件和软件来持久地（persistently）存储数据。这样 的存储对于所有系统都很重要，因为用户非常关心他们的数据。
-
-下面的程序：第一个是对 open()的调用，它打开
-文件创建它。第二个是 write()，将一些数据写入文件。第三个是 close()，只是简单地关闭文
-件，从而表明程序不会再向它写入更多的数据。
-```c
-#include <stdio.h>
-#include <unistd.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <sys/types.h>
-int main(int argc, char *argv[])
-{
-    int fd = open("/tmp/file", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
-    assert(fd > -1);
-    int rc = write(fd, "hello world\n", 13);
-    assert(rc == 13);
-    close(fd);
-    return 0;
-}
-```
+# CPU virtulization
 ## process
 process is an instance of programme
 
@@ -451,3 +344,88 @@ all the rules below
 * 规则 4：一旦工作用完了其在某一层中的时间配额（无论中间主动放弃了多少次
 CPU），就降低其优先级（移入低一级队列）。
 * 规则 5：经过一段时间 S，就将系统中所有工作重新加入最高优先级队列。
+#### 调度：比例份额
+一个不同类型的调度程序——比例份额（proportional-share）调度程序，有时也称为公平份额（fair-share）调度程序。
+
+比例份额算法基于一个简单的想法：调
+度程序的最终目标，是确保`每个工作获得一定比例的 CPU 时间`，而不是优化周转时间和响
+应时间。
+
+假设有两个进程 A 和 B，A 拥有 75 张彩票，B 拥有 25 张。因此我们希望 A 占用 75%的 CPU 时间，而 B 占用 25%。
+
+通过不断定时地（比如，每个时间片）抽取彩票，彩票调度从概率上（random）获得这种份额比例。
+
+|ticket mechanism| description|
+|---|---|
+| 彩票货币（ticket currency）|每个进程可以拥有自己的货币，通过兑换成全局货币进行使用|
+| 彩票转让（ticket transfer）|一个进程可以临时将自己 的彩票交给另一个进程。这种机制在客户端/服务端交互的场景中尤其有用，在这种场景中， 客户端进程向服务端发送消息，请求其按自己的需求执行工作，为了加速服务端的执行， 客户端可以将自己的彩票转让给服务端，从而尽可能加速服务端执行自己请求的速度。服 务端执行结束后会将这部分彩票归还给客户端。
+ | 彩票通胀（ticket inflation）|一个进程可以临时提升或 降低自己拥有的彩票数量。通胀可以用于进 程之间相互信任的环境。在这种情况下，如果一个进程知道它需要更多 CPU 时间，就可以 增加自己的彩票，从而将自己的需求告知操作系统，这一切不需要与任何其他进程通信。
+
+ ![](./img/ticket%20example)
+
+---
+系统的运行严重依赖于彩票的分配。
+
+假设用户自己知道如何分配，因此可以 给每个用户一定量的彩票，由用户按照需要自主分配给自己的工作。然而这种方案似乎什
+么也没有解决——还是`没有给出具体的分配策略`。
+
+因此`彩票分配的问题没有最佳答案`
+
+#### 步长调度（stride scheduling）
+当需要进行调度时，选择目前拥有最小行程值的进程，并且在运行之后将该进程的行程值增加一个步长。
+```c
+current = remove_min(queue);        // pick client with minimum pass
+schedule(current);                  // use resource for quantum
+current->pass += current->stride;   // compute next pass using stride
+insert(queue, current);             // put back into the queue
+```
+
+![](./img/stride%20example)
+
+彩票调度有一个步长调度没有的优势——不需要全局状态。假如一个新的进
+程在上面的步长调度执行过程中加入系统，应该怎么设置它的行程值呢？设置成 0 吗？
+这样的话，它就独占 CPU 了。而彩票调度算法不需要对每个进程记录全局状态，只需要
+用新进程的票数更新全局的总票数就可以了。因此彩票调度算法能够更合理地处理新加
+入的进程。
+
+#### 多处理器调度
+|多处理器的问题|description|
+|---|---|
+| 缓存一致性（cache coherence）|不同cpu的cache不同，通过总线窥探（bus snooping）来保证数据的正确性|
+| 缓存亲和度（cache affinity）|cache有许多信息，下次该进程在相同 CPU 上运行时，由于缓存中的数据而执行得更快。相反，在不同的 CPU 上执行，会由于需要重新加载数据而很慢, 应该尽可能将进程保持在同一个cpu上|
+| 同步| 类函数正确工作的方法是加锁（locking）。这里只需要一个互斥锁（即 pthread_mutex_t m;），然后在函数开始时调用 lock(&m)，在结束时调用 unlock(&m)，确保代 码的执行如预期。我们会看到，这里依然有问题，尤其是性能方面。|
+##### 单队列调度
+`单队列多处理器调度（Single Queue Multiprocessor Scheduling，SQMS）` 引入了一些亲和度机制
+
+![](./img/SQNS)
+##### 多队列调度
+`多队列多处理器调度（Multi-Queue Multiprocessor Scheduling，MQMS）`
+
+在 MQMS 中，基本调度框架包含多个调度队列，每个队列可以使用不同的调度规则，
+比如轮转或其他任何可能的算法。当一个工作进入系统后，系统会依照一些启发性规则（如
+随机或选择较空的队列）将其放入某个调度队列。这样一来，每个 CPU 调度之间相互独立，
+就避免了单队列的方式中由于数据共享及同步带来的问题。
+
+`负载不均（load imbalance）` problem
+
+![](./img/load%20imblance)
+
+solution
+* 迁移（migration）
+* 工作窃取（work stealing）
+
+如果太频繁地检查其他队列，就会带来较高的开销，可扩展性不好，相反，如果检查间隔太长，又可能会带来严重的负载不均。`找到合适的阈值仍然是黑魔法`.
+
+# Adress virtulization(virtual memory)
+three goals
+* tranparency
+* efficiency
+* protection
+---
+memory api
+* malloc()
+* free()
+* realloc()
+* calloc()
+
+mmap()调用从操作系统获取内存。通过传入正确的参数，mmap()可以在程序中创建一个匿名（anonymous）内存区域——这个区域不与任何特定文件相关联，而是与交换空间（swap space）相关联
