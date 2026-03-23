@@ -421,11 +421,47 @@ three goals
 * tranparency
 * efficiency
 * protection
----
-memory api
+## memory api
 * malloc()
 * free()
 * realloc()
 * calloc()
 
 mmap()调用从操作系统获取内存。通过传入正确的参数，mmap()可以在程序中创建一个匿名（anonymous）内存区域——这个区域不与任何特定文件相关联，而是与交换空间（swap space）相关联
+
+`interesting programme` as follow
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main(int argc, char *argv[]) {
+    printf("location of code : %p\n", main);
+    printf("location of heap : %p\n", malloc(100e6));
+    int x = 3;
+    printf("location of stack: %p\n", &x);
+    return 0;
+}
+```
+```console
+# run in cachyos
+[i]± |master ?:1 ✗| → ./va
+location of code : 0x55a9192ea159
+location of heap : 0x7fb26faa1010
+location of stack: 0x7ffca0ac6814
+```
+## mechanism
+### address translation
+![](./img/address%20space)
+
+
+$$physical address = virtual address + base$$
+
+* 基址（base）寄存器
+* 界限（bound）寄存器: provide access protect, in case access outside of bound
+
+CPU负责地址转换的部分统称为`内存管理单元（Memory Management Unit，MMU）`
+
+operating system work
+* 第一，在进程创建时，操作系统必须采取行动，为进程的地址空间找到内存空间。
+* 第二，在进程终止时（正常退出，或因行为不端被强制终止），操作系统也必须做一些 工作，回收它的所有内存，给其他进程或者操作系统使用。
+* 第三，在上下文切换时，操作系统也必须执行一些额外的操作。
+* 第四，操作系统必须提供异常处理程序（exception handler），或要一些调用的函数，像上面提到的那样。
