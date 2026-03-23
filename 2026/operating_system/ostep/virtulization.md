@@ -1,8 +1,8 @@
-# CPU virtulization
-## process
+# CPU Virtulization
+## Process
 process is an instance of programme
 
-### process api
+### Process Api
 process api can be divided into `several types`
 * `create`: 操作系统必须包含一些创建新进程的方法。在 shell 中键入命令或双击应用程序图标时，会调用操作系统来创建新进程，运行指定的程序。
 * `destory`: 由于存在创建进程的接口，因此系统还提供了一个强制销毁进程的接口。当然，很多进程会在运行完成后自行退出。但是，如果它们不退出， 用户可能希望终止它们，因此停止失控进程的接口非常有用。
@@ -11,7 +11,7 @@ process api can be divided into `several types`
 然后恢复（继续运行）。
 * `statu`: 通常也有一些接口可以获得有关进程的状态信息，例如运行了多长时间，或者处于什么状态。
 
-#### fork()
+#### Fork()
 `fork()` create a child process
 ```c
 #include <stdio.h>
@@ -42,7 +42,7 @@ hello, I am parent of 29147 (pid:29146)
 hello, I am child (pid:29147)
 prompt>
 ```
-#### wait()
+#### Wait()
 `wait()` wait for a process ends, similar api like `waitpid()`
 ```c
 #include <stdio.h>
@@ -73,7 +73,7 @@ hello, I am parent of 29147 (pid:29146)
 hello, I am child (pid:29147)
 prompt>
 ```
-#### exec()
+#### Exec()
 `exec()` can execute other programme, `never return`
 
 the following programme execute `wc(word count)` programme
@@ -117,7 +117,7 @@ hello, I am child (pid:29384)
 hello, I am parent of 29384 (wc:29384) (pid:29383)
 prompt>
 ```
-### process status
+### Process Status
 ![](./img/process%20status)
 * `running`：在运行状态下，进程正在处理器上运行。这意味着它正在执行
 指令。
@@ -127,7 +127,7 @@ prompt>
 时才会准备运行。一个常见的例子是，当进程向磁盘发起 I/O 请求时，它会被阻塞，
 因此其他进程可以使用处理器。
 
-### process infomation
+### Process Infomation
 在上下文切换(context switch)中，我们需要知道一个进程的信息，通常使用`数据结构`来记录
 
 `example`: `xv6 proc struct`
@@ -166,11 +166,11 @@ struct proc {
                                 // current interrupt
 };
 ```
-### processs mechanism
+### Processs Mechanism
 two basic problem
 * limited operation
 * context switch
-#### limited operation
+#### Limited Operation
 simple idea: 受限直接执行 
 
 ![](./img/direct%20run)
@@ -184,7 +184,7 @@ define running mode
 imporved version as follow
 
 ![](./img/limited%20running%20protocol)
-#### context switch
+#### Context Switch
 `协作方式：等待系统调用`
 
 操作系统相信系统的
@@ -237,7 +237,7 @@ swtch:
     pushl 0(%eax)           # return addr put in place
     ret                     # finally return into new ctxt
 ```
-### process sheduling policy
+### Process Sheduling Policy
 接下来介绍进程如何调度
 
 ---
@@ -371,7 +371,7 @@ CPU），就降低其优先级（移入低一级队列）。
 
 因此`彩票分配的问题没有最佳答案`
 
-#### 步长调度（stride scheduling）
+#### 步长调度（Stride Scheduling）
 当需要进行调度时，选择目前拥有最小行程值的进程，并且在运行之后将该进程的行程值增加一个步长。
 ```c
 current = remove_min(queue);        // pick client with minimum pass
@@ -416,12 +416,12 @@ solution
 
 如果太频繁地检查其他队列，就会带来较高的开销，可扩展性不好，相反，如果检查间隔太长，又可能会带来严重的负载不均。`找到合适的阈值仍然是黑魔法`.
 
-# Adress virtulization(virtual memory)
+# Adress Virtulization(virtual memory)
 three goals
 * tranparency
 * efficiency
 * protection
-## memory api
+## Memory Api
 * malloc()
 * free()
 * realloc()
@@ -448,8 +448,8 @@ location of code : 0x55a9192ea159
 location of heap : 0x7fb26faa1010
 location of stack: 0x7ffca0ac6814
 ```
-## mechanism
-### address translation
+## Mechanism
+### Address Translation
 ![](./img/address%20space)
 
 
@@ -465,3 +465,134 @@ operating system work
 * 第二，在进程终止时（正常退出，或因行为不端被强制终止），操作系统也必须做一些 工作，回收它的所有内存，给其他进程或者操作系统使用。
 * 第三，在上下文切换时，操作系统也必须执行一些额外的操作。
 * 第四，操作系统必须提供异常处理程序（exception handler），或要一些调用的函数，像上面提到的那样。
+
+### Memory Managment
+#### 分段(Segmentation)
+如果我们将整个地址空间放入物理内存，那么栈和堆之间的空间并没有被进程使用，却依然占用了实际的物理内存, 这就造成了浪费, 于是有了分段的概念。
+```
+                                补充：段错误
+段错误指的是在支持分段的机器上发生了非法的内存访问。有趣的是，即使在不支持分段的机器上这个术语依然保留。但如果你弄不清楚为什么代码老是出错，就没那么有趣了。
+```
+`example`
+
+堆从虚拟地址 4K（4096）开始，4200 的
+偏移量实际上是 4200 减去 4096，即 104，然后用这个偏移量（104）加上基址寄存器中的
+物理地址（34KB），得到真正的物理地址 34920
+
+##### 段编码
+`编码`段和段的偏移量
+
+---
+**explicit** 
+
+![](./img/segment%20explicit%20representation)
+
+前两位（01）告诉硬件我们引用哪个段。剩下的 12 位是段内偏移：
+0000 0110 1000（即十六进制 0x068 或十进制 104）
+
+```c
+// get top 2 bits of 14-bit VA
+Segment = (VirtualAddress & SEG_MASK) >> SEG_SHIFT
+// now get offset
+Offset = VirtualAddress & OFFSET_MASK
+if (Offset >= Bounds[Segment])
+    RaiseException(PROTECTION_FAULT)
+else
+    PhysAddr = Base[Segment] + Offset
+    Register = AccessMemory(PhysAddr)
+```
+
+---
+关于heap, heap`反向增长`
+
+假设要访问虚拟地址 15KB，它应该映射到物理地址 27KB。该虚拟地
+址的二进制形式是：11 1100 0000 0000（十六进制 0x3C00）。硬件利用前两位（11）来指定
+段，但然后我们要处理偏移量 3KB。为了得到正确的反向偏移，我们必须从 3KB 中减去最
+大的段地址：在这个例子中，段可以是 4KB，因此`正确的偏移量`是 3KB 减去 4KB，即−1KB。
+只要用这个`反向偏移量`（−1KB）加上基址（28KB），就得到了正确的物理地址 27KB。用
+户可以进行界限检查，确保反向偏移量的绝对值小于段的大小。
+
+---
+共享代码段很有用，为此添加额外的`保护位(protection bit)`
+
+![](./img/addititional%20bit)
+##### Problem
+`如何管理物理内存的空闲空间`
+
+物理内存很快充满了许多空闲空间的小洞，因而很难分配给新的段，或扩大已有的段。这种问题被称为`外部碎片（external fragmentation）`
+
+solution
+* 紧凑（compact）物理内存
+* 利用空闲列表管理算法
+
+external fragmentation `can not be eliminated`, good algorithm try to `minimize it`
+
+##### Free Memory Management
+> refer malloc lab of cmu15-213 to gain better understanding
+
+---
+`two basic mechanism`
+* splitting(分割)
+* coalescing(合并)
+
+大多数分配程序都会在`头块（header）`中保存一点额外的信息
+
+![](./img/header)
+
+|basic strategies|description|
+|---|---|
+|best-fit|首先遍历整个空闲列表，找到和请求大小一样或更大的空闲块，然后返回这组候选者中最小的一块。|
+|wrost-fit|它尝试找最大的空闲块，分割并满足用户需求后，将剩余的块（很大）加入空闲列表。|
+|first-fit|找到第一个足够大的块，将请求的空间返回给用户。|
+|next-fit|多维护一个指针，指向上一次查找结束的位置。其想法是将对空闲空间的查找操作扩散到整个列表中去，避 免对列表开头频繁的分割。|
+
+---
+other strategies
+**分离空闲列表**
+
+如果某个应用程序经常申请一种（或几种）大小的内存空间，那就用一个独立的列表，只管理这样大小的对象。其他大小的请求都一给更通用的内存分配程序。
+
+problem: 应该拿出多少内存来专门为某种大小的请求服务，而将剩余的用来满足一般请求
+
+solution: Solaris 系统内核设计的`厚块分配程序（slab allocator）`
+
+---
+**伙伴系统**
+下述为`二分伙伴分配程序（binary buddy allocator）`
+
+![](./img/buddy)
+
+伙伴系统的漂亮之处在于块被释放时。如果将这个 8KB 的块归还给空闲列表，分配程
+序会检查“伙伴”8KB 是否空闲。如果是，就合二为一，变成 16KB 的块。然后会检查这
+个 16KB 块的伙伴是否空闲，如果是，就合并这两块。这个递归合并过程继续上溯，直到合
+并整个内存区域，或者某一个块的伙伴还没有被释放。
+
+#### 分页
+将空间分割成固定长度的分片
+
+![](./img/page)
+
+`page table`
+
+`virtual memory 21` translation example as follow
+
+![](./img/address%20translation%20example)
+
+##### PTE
+页表就是一种数据结构，用于将虚拟地址（或者实际上，
+是虚拟页号）映射到物理地址（物理帧号）
+
+操作系统通过虚拟页号（VPN）检索，并在该索引处查找页表项(PTE),以便找到期望的物理帧号（PFN）
+ 
+图 18.5 显示了来自 x86 架构的示例页表项。它包含一个存在位（P），确定是否允
+许写入该页面的读/写位（R/W） 确定用户模式进程是否可以访问该页面的用户/超级用户位
+（U/S），有几位（PWT、PCD、PAT 和 G）确定硬件缓存如何为这些页面工作，一个访问位(A), 一个脏位（D），最后是页帧号（PFN）
+
+![](./img/PTE)
+
+#### Problem
+speed problem
+
+对于每个内存引用（无论是取指令还是显式加载或存储），分页都需要我们执行一个
+额外的内存引用，以便首先从页表中获取地址转换。工作量很大！额外的内存引用开销很
+大，在这种情况下，可能会使进程`减慢两倍或更多`。
