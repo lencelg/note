@@ -1,5 +1,5 @@
 = Concurrency
-lencelg
+:author: lencelg from Acradia Bay
 :source-highlighter: highlight.js 
 :imagesdir: img
 :toc:
@@ -304,4 +304,91 @@ other thread safe data structure::
 ----
 pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m);
 pthread_cond_signal(pthread_cond_t *c);
+----
+
+.父线程等待子线程：使用条件变量
+[source, c]
+----
+int done = 0;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+void thr_exit() {
+    Pthread_mutex_lock(&m);
+    done = 1;
+    Pthread_cond_signal(&c);
+    Pthread_mutex_unlock(&m);
+}
+void *child(void *arg) {
+    printf("child\n");
+    thr_exit();
+    return NULL;
+}
+void thr_join() {
+    Pthread_mutex_lock(&m);
+    while (done == 0)
+        Pthread_cond_wait(&c, &m);
+    Pthread_mutex_unlock(&m);
+}
+int main(int argc, char *argv[]) {
+    printf("parent: begin\n");
+    pthread_t p;
+    Pthread_create(&p, NULL, child, NULL);
+    thr_join();
+    printf("parent: end\n");
+    return 0;
+}
+----
+
+the variable `done` is very important to make `thread safe`, because it make sure you holds the lock when calling wait() and signal()
+
+**调用 signal 和 wait 时要持有锁(hold the lock when calling signal or wait)，你会保持身心健康的**
+
+=== producer/consumer problem
+假设有一个或多个生产者线程和一个或多个消费者线程。生产者把生成的数据项放入缓冲区；消费者从缓冲区取走数据项，以某种方式消费。
+
+use two conditional variable to avoid that producer wake up the consumer and the consumer wake up the producer
+
+生产者只有在缓冲区满了的时候才会睡眠，消费者也只有在队列为空的时候睡眠
+[source, c]
+----
+int buffer[MAX];
+int fill = 0;
+int use = 0;
+int count = 0;
+void put(int value) {
+    buffer[fill] = value;
+    fill = (fill + 1) % MAX;
+    count++;
+}
+int get() {
+    int tmp = buffer[use];
+    use = (use + 1) % MAX;
+    count--;
+    return tmp;
+}
+cond_t empty, fill;
+mutex_t mutex;
+void *producer(void *arg) {
+    int i;
+for (i = 0; i < loops; i++) {
+    Pthread_mutex_lock(&mutex);
+    while (count == MAX)
+        Pthread_cond_wait(&empty, &mutex);
+    put(i);
+    Pthread_cond_signal(&fill);
+    Pthread_mutex_unlock(&mutex);
+}
+}
+void *consumer(void *arg) {
+    int i;
+    for (i = 0; i < loops; i++) {
+        Pthread_mutex_lock(&mutex);
+        while (count == 0)
+            Pthread_cond_wait(&fill, &mutex);
+        int tmp = get();
+        Pthread_cond_signal(&empty);
+        Pthread_mutex_unlock(&mutex);
+        printf("%d\n", tmp);
+    }
+ }
 ----

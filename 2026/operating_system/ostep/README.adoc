@@ -1,5 +1,5 @@
 = Reference table
-lencelg
+:author: lencelg from Acradia Bay
 
 link:introduction.md[introduction]
 
