@@ -596,3 +596,81 @@ speed problem
 对于每个内存引用（无论是取指令还是显式加载或存储），分页都需要我们执行一个
 额外的内存引用，以便首先从页表中获取地址转换。工作量很大！额外的内存引用开销很
 大，在这种情况下，可能会使进程`减慢两倍或更多`。
+
+#### TLB
+使用分页作为核心机制来实现虚拟内存，可能会带来`较高的性能开销`。
+
+于是考虑使用cache, 地址转换旁路缓冲存储器（translation-lookaside buffer，TLB）
+
+---
+TLB 流程如下
+
+首先从虚拟地址中提取页号（VPN），
+然后检查 TLB 是否有该 VPN 的转换映射。
+
+* 如果有，我们有了 TLB 命中（TLB hit）， 这意味着 TLB 有该页的转换映射。成功！接下来我们就可以从相关的 TLB 项中取出页帧号 （PFN） ，与原来虚拟地址中的偏移量组合形成期望的物理地址（PA），并访问内存 ，假定保护检查没有失败。
+* 如果 CPU 没有在 TLB 中找到转换映射（TLB 未命中），我们有一些工作要做。在本例 中，硬件访问页表来寻找转换映射，并用该转换映射更新 TLB， 假设该虚拟地址有效，而且我们有相关的访问权限。上述系列操作开销较 大，主要是因为访问页表需要额外的内存引用。最后，当 TLB 更新成功后，系 统会重新尝试该指令，这时 TLB 中有了这个转换映射，内存引用得到很快处理。
+
+---
+the TLB content look like this
+```
+                        VPN ｜ PFN ｜ 其他位
+``` 
+---
+but bring new problem
+
+TLB 中包含的虚拟到物理的地址映射只对当前进程有效，对其他进程是没有意义的。
+
+可以增加硬件支持，实现跨上下文切换的 TLB 共享。比如
+有的系统在 TLB 中添加了一个地址空间标识符（Address Space Identifier，ASID）
+ 。可以把
+ASID 看作是进程标识符（Process Identifier，PID），但通常比 PID 位数少（PID 一般 32 位，
+ASID 一般是 8 位）。
+
+---
+TLB replacement strategy
+* LRU(least-recently-used， LRU)
+* random
+
+##### page problem2
+`页表太大，因此消耗的内存太多`
+
+* 分配更大的页： 造成内部碎片（internal fragmentation）问题
+* 混合方法：分页和分段: 这种杂合导致外部碎片再次出现。在内存中为它们寻找自由空间更为复杂。
+
+---
+多级页表
+
+![](/img/multi%20page%20table)
+## Swap Space
+操作系统把当前没有在用的那部分地址空间找个地方存储起来。硬盘（hard disk drive）通常能够满足这个需求。
+
+在硬盘上开辟一块空间成为swap space
+
+![](./img/swap%20space%20intuition)
+
+在页表项中增加存在位（present bit）来表明page是否在swap space上
+## cache replacement strategy
+|strategy| description|
+|---|---|
+|最优替换策略|如果你不得不踢出一些页，为什么不踢出在最远将来才会访问的页呢, 但是实际上很难实现|
+|FIFO|first in first out 无法确定页的重要性|
+|random|depends on how lucky you are|
+|LRU|实现很昂贵，忽视了大多数程序都具有的局部性特点|
+
+于是考虑实现`近似LRU`, 使用时钟算法（clock algorithm）等机制
+
+时钟算法的一个小修改: `脏页`, 如果页已被修改（modified）并因此变脏（dirty），则踢出它就必须将它写回磁盘，这很昂贵。如果它没有被修改（因此是干净的，clean），踢出就没成本。
+
+---
+other strategies
+* demand paging
+* prefetching
+* grouping
+
+---
+**`thrashing problem`**
+
+
+---
+the last part of virtualization is the VAX/VMS virtual memory system example(details in book)
