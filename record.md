@@ -7,3 +7,4 @@ Useless record
 * cs61a
 * data100
 * coursera-machine-learning
+* ostep
