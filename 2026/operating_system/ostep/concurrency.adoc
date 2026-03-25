@@ -392,3 +392,81 @@ void *consumer(void *arg) {
     }
  }
 ----
+
+== Semaphores
+信号量是有一个整数值的对象
+
+在POSIX标准中,信号量的操作函数是sem_wait()和 sem_post()
+
+[source, c]
+----
+#include <semaphore.h>
+sem_t s;
+sem_init(&s, 0, 1);
+
+int sem_wait(sem_t *s) {
+    decrement the value of semaphore s by one
+    wait if value of semaphore s is negative
+}
+
+int sem_post(sem_t *s) {
+    increment the value of semaphore s by one
+    if there are one or more threads waiting, wake one
+}
+----
+sem_second_arg:: 0表示信号量是在同一进程的多个线程共享的
+sem_third_arg:: init the s to be 1
+
+use semaphores to solve producer/consumer problem
+[source, c]
+----
+sem_t empty;
+sem_t full;
+sem_t mutex;
+void *producer(void *arg) {
+    int i;
+    for (i = 0; i < loops; i++) {
+    sem_wait(&empty);   // line p1
+    sem_wait(&mutex);   // line p1.5 (MOVED MUTEX HERE...)
+    put(i);             // line p2
+    sem_post(&mutex);   // line p2.5 (... AND HERE)
+    sem_post(&full);    // line p3
+    }
+}
+void *consumer(void *arg) {
+    int i;
+    for (i = 0; i < loops; i++) {
+    sem_wait(&full);    // line c1
+    sem_wait(&mutex);   // line c1.5 (MOVED MUTEX HERE...)
+    int tmp = get();    // line c2
+    sem_post(&mutex);   // line c2.5 (... AND HERE)
+    sem_post(&empty);   // line c3
+    printf("%d\n", tmp);
+    }
+}
+int main(int argc, char *argv[]) {
+    // ...
+    sem_init(&empty, 0, MAX);   // MAX buffers are empty to begin with...
+    sem_init(&full, 0, 0);      // ... and 0 are full
+    sem_init(&mutex, 0, 1);     // mutex=1 because it is a lock
+    // ...
+}
+----
+other problem::
+    * 读者—写者锁
+    * 哲学家就餐问题(dining philosopher's problem)
+
+== concurrency problem
+非死锁缺陷::
+    - 违反原子性（atomicity violation）缺陷
+    - 错误顺序（order violation）缺陷
+
+`死锁缺陷`
+
+* 互斥：线程对于需要的资源进行互斥的访问（例如一个线程抢到锁）。
+* 持有并等待：线程持有了资源（例如已将持有的锁），同时又在等待其他资源（例如，需要获得的锁）。
+* 非抢占：线程获得的资源（例如锁），不能被抢占。
+* 循环等待：线程之间存在一个环路，环路上每个线程都额外持有一个资源，而这个资源又是下一个线程要申请的。
+
+PS: event-driven concurrency chapter not read(不是懒)
+   

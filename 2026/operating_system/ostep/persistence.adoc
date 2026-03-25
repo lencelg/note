@@ -1,0 +1,254 @@
+= Persistence
+:author: lencelg from Acradia Bay
+:highlightjs-theme: highlight.js
+:toc:
+:imagesdir: img
+
+== basic I/O device concept
+
+=== bus
+.the overall architecture
+[[img-bus]]
+image::bus[]
+
+硬件与os之间存在协议
+
+=== speed up cpu and I/O device
+* interrupt and I/O overlap
+* interrupt and process overlap
+* DMA(Direct Access Memory):  DMA 引擎是系统中的一个特殊设备，它可以协调完成内存和设备间的数据传递，不需要 CPU 介入
+
+=== interact with I/O device
+
+use explicit I/O instruction::
+这些指令规定了操作系统将数据发送到特定设备寄存器的方法，从而允许构造上文提到的协议。
+use memory-mapped I/O::
+硬件将设备寄存器 作为内存地址提供。当需要访问设备寄存器时，操作系统装载（读取）或者存入（写入） 到该内存地址；然后硬件会将装载/存入转移到设备上，而不是物理内存
+
+=== device driver
+os could be different, one way to solve it is to provide driver for os
+
+.file system stack
+image::file system overall[]
+
+driver programme is large for providing services for different os
+
+== hard driver disk
+所有现代驱动器的基本接口都很简单。驱 动器由大量扇区(512 字节块)组成，每个扇区都可以读取或写入。在具有 n 个扇区的磁盘 上，扇区从 0 到 n-1 编号。因此,我们可以将磁盘视为一组扇区,0 到 n-1 是驱动器的地址 空间(address space)。
+
+.disk
+image::disk.png[]
+=== disk scheduling
+==== SSTF(最短寻道时间优先)
+SSTF 按磁道对 I/O 请求队列排序，选择在最近磁道上的请求先完成
+
+problem: stravtion when only part of disk always has the short request, then other part of disk will not convered
+==== elevator algorithm
+SCAN简单地以跨越磁道的顺序来服务磁盘请求。我们将一次跨越磁盘称为扫一遍。因此，如果请求的块所属的磁道在这次扫一遍中已经服务过了，它就不会立即处理，而是排队等待下次扫一遍。
+
+problem: 忽视了旋转
+==== SPTF(最短定位时间优先)
+
+磁头当前定位在内圈磁道上的扇区 30
+上方。因此，调度程序必须决定：下一个请求应该为安排扇
+区 16（在中间磁道上）还是扇区 8（在外圈磁道上）。接下来
+应该服务哪个请求？
+
+image::SPTF[]
+
+视情况而定
+
+如果在我们的例子中，寻道时间远远高于
+旋转延迟，那么 SSTF（和变体）就好了。但是，想象一下，如果寻道比旋转快得多。然后，
+在我们的例子中，寻道远一点的、在外圈磁道的服务请求 8，比寻道近一点的、在中间磁道
+的服务请求 16 更好，后者必须旋转很长的距离才能移到磁头下。
+
+SPTF 是有用的，它提高了性能。然而，它在操作系统中实现起来更加困难，操
+作系统通常不太清楚磁道边界在哪，也不知道磁头当前的位置（旋转到了哪里）。因此， SPTF
+通常在驱动器内部执行
+
+`os并不掌控所有的调度, disk本身具有复杂的内部调度程序`
+
+=== Redundant disk arrays(RAID)
+`Redundant Array of Inexpensive Disks`(RAID):
+这种技术使用多个磁盘一起构建更快、更大、更可靠的磁盘系统。
+
+RAID 是一个非常专业的计算机系统：它有一个处理器，内存和磁盘。然而，它不是运行应用程序，而是运行专门用于操作 RAID 的软件。
+
+there are **interesting designs** in RAID:  RAID-0 级（条带化）， RAID-1 级（镜像）和 RAID-4/5 级（基于奇偶校验的冗余）
+
+==== RAID-0(striping)
+.轮转方式将磁盘阵列的块分布在磁盘上
+image::RAID 0 striping[]
+
+这种方法的目的是在对数组的连续块进行请求时,从阵列中获取最大的并行性, 上面的块 0、1、2 和 3 在相同的条带中
+
+===== performance view
+从容量的角度来看，它是顶级的：给定 N 个磁盘，条件化提供 N 个磁盘的有用容量。从可靠性的角度来看，条带化也是顶级的，但是最糟糕：任何磁盘故障都会导致数据丢失。最后，性能非常好：通常并行使用所有磁盘来为用户 I/O 请求提供服务。
+
+==== RAID-1(mirroring)
+.生成系统中每个块的多个副本
+image::mirroring in RAID-1[]
+
+===== performance view
+
+对于 N 个磁盘，镜像的有用容量为 N/2,价格昂贵
+
+从可靠性的角度来看， RAID-1 表现良好。
+
+==== RAID-4(parity)
+
+.RAID-4 with parity
+image::parity RAID-4[]
+
+对于每一条数据，我们都添加了一 个奇偶校验(parity)块,用于存储该条块的冗余信息。例如,奇偶校验块 P1 具有从块 4、 5、6 和 7 计算出的冗余信息。
+
+use $$XOR$$ function for parity
+
+parity can use to reconstruct the error disk
+
+===== performance view
+RAID-4 容许 1 个磁盘故障，不容许更多。如果丢失多个磁盘，则无法重建丢失的数据。
+
+==== RAID-5(rotating parity)
+RAID-5的工作原理与 RAID-4 几乎完全相同, 只是它将奇偶校验块跨驱动器`旋转`
+
+image::rotating parity[]
+
+===== performance view
+RAID-5 基本上与 RAID-4 相同， 随机读取性能稍好一点，因为我们可以利用所有的磁盘.
+
+== file and dir
+every file has it's own `low-level name`, called **inode**(history reason)
+
+dir has it's own **inode** too, 但是它的内容非常具体：它包含一个(用户可读名字，低级名字)对的列表。例如,假设存在一个低级别名称为“10”的文件,它的用户可读的名称为“foo”。 “foo”所在 的目录因此会有条目(“foo”, “10”),将用户可读名称映射到低级名称。
+
+目录具有层次结构
+
+=== file system call api
+==== open()
+[source, c]
+----
+int fd = open("foo", O_CREAT | O_WRONLY | O_TRUNC);
+----
+
+函数 open()接受一些不同的标志。在本例中,程序创建文件(O_CREAT),只能写入该文件,因为以(O_WRONLY)这种方式打开,并且如果该文件已经存在,则首先将其截断 为零字节大小,删除所有现有内容(O_TRUNC)。
+
+open()的一个重要方面是它的返回值:文件描述符(file descriptor)。文件描述符只是一个整数,是每个进程私有的,在UNIX系统中用于访问文件。
+
+一旦文件被打开,你就可以使用文件描述符来读取或写入文件,假定你有权这样做。这样,一个文件描述符就是一种权限(capability)
+
+==== fsync()
+程序调用write()时, 文件系统会将这些写入在内存中缓冲(buffer)一段时间。在稍后的时间点写入将实际发送到存储设备。
+
+use fsync() to get high priority and write faster
+
+.simple usage of fsync()
+[source, c]
+----
+int fd = open("foo", O_CREAT | O_WRONLY | O_TRUNC);
+assert(fd > -1);
+int rc = write(fd, buffer, size);
+assert(rc == size);
+rc = fsync(fd);
+assert(rc == 0);
+----
+
+有趣的是,这段代码并不能保证你所期望的一切。在某些情况下,还需要fsync()包含 foo 文件的目录。添加此步骤不仅可以确保文件本身位于磁盘上，而且可以确保文件（如果新创建）也是目录的一部分。毫不奇怪，这种细节往往被忽略，导致许多应用程序级别的错误
+
+==== rename()
+[source, c]
+----
+rename(char * old, char * new)
+// example
+rename("foo.txt.tmp", "foo.txt");
+----
+
+==== metadata
+文件系统能够保存关于它正在存储的每个文件的大量信息
+
+[source, c]
+----
+struct stat {
+dev_t st_dev;           /* ID of device containing file */
+ino_t st_ino;           /* inode number */
+mode_t st_mode;         /* protection */
+nlink_t st_nlink;       /* number of hard links */
+uid_t st_uid;           /* user ID of owner */
+gid_t st_gid;           /* group ID of owner */
+dev_t st_rdev;          /* device ID (if special file) */
+off_t st_size;          /* total size, in bytes */
+blksize_t st_blksize;   /* blocksize for filesystem I/O */
+blkcnt_t st_blocks;     /* number of blocks allocated */
+time_t st_atime;        /* time of last access */
+time_t st_mtime;        /* time of last modification */
+time_t st_ctime;        /* time of last status change */
+};
+----
+==== other api
+[source, c]
+----
+// rm a file
+unlink("foo")
+
+// make a dir
+mkdir("foo", 0777)
+
+// read a dir content
+struct dirent {
+    char d_name[256];           /* filename */
+    ino_t d_ino;                /* inode number */
+    off_t d_off;                /* offset to the next dirent */
+    unsigned short d_reclen;    /* length of this record */
+    unsigned char d_type;       /* type of file */
+};
+int main(int argc, char *argv[]) {
+    DIR *dp = opendir(".");
+    assert(dp != NULL);
+    struct dirent *d;
+    while ((d = readdir(dp)) != NULL) {
+        printf("%d %s\n", (int) d->d_ino, d->d_name);
+    }
+    closedir(dp);
+    return 0;
+}
+
+// rmdir() can not remove a non-empty dir
+rmdir()
+----
+
+==== hard link
+
+about hard link and soft link, can refer note in linux_user_basis/note1.md in note repo
+
+`hard link are the same file with same inode, just like copies`
+[, console]
+----
+prompt> echo hello > file
+prompt> cat file
+hello
+prompt> ln file file2
+prompt> cat file2
+hello
+prompt> ls -i file file2
+67158084 file
+67158084 file2
+prompt>
+----
+
+==== soft link
+`can view soft link(symbolic link) as a pointer`
+
+[, console]
+----
+prompt> echo hello > file
+prompt> ln -s file file2
+prompt> cat file2
+hello
+prompt> stat file
+... regular file ...
+prompt> stat file2
+... symbolic link ...
+----
+
+file2 是 4 个字节,原因在于形成符号链接的方式,即将链接指向文件的路径名作为链接文件的数据.因为我们链接到一个名为 file 的文件,所以我们的链接文件file2.如果链接到更长的路径名,链接文件会更大.
