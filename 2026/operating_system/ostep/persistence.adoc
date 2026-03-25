@@ -252,3 +252,111 @@ prompt> stat file2
 ----
 
 file2 是 4 个字节,原因在于形成符号链接的方式,即将链接指向文件的路径名作为链接文件的数据.因为我们链接到一个名为 file 的文件,所以我们的链接文件file2.如果链接到更长的路径名,链接文件会更大.
+
+== File System
+=== VSFS
+Very Simple File System
+
+用一个空闲列表(free list),指向第
+一个空闲块，然后它又指向下一个空闲块，依此类推。我们选择一种简单而流行的结构，
+称为位图(bitmap),一种用于数据区域(数据位图， data bitmap),另一种用于 inode 表(inode
+位图,inode bitmap)。位图是一种简单的结构:每个位用于指示相应的对象块是空闲(0)
+还是正在使用.因此新的磁盘包含 inode 位图(i)和数据位图(d)
+
+超级块(superblock)，在下图中用 S 表示。超级块包含关于该特定文件系统的信息，
+包括例如文件系统中有多少个 inode 和数据块(在这个例子中分别为 80 和 56)、inode 表的
+开始位置(块 3)等等。它可能还包括一些幻数,来标识文件系统类型(在本例中为 VSFS)
+
+image::VSFS overall view[]
+
+=== FFS
+老 UNIX 文件系统(VSFS)将磁盘当成随机存取内存。数据遍布各处，而不考虑保
+存数据的介质是磁盘的事实，因此具有`昂贵的定位成本`。更糟糕的是,文件系统最终会变得非常`碎片化(fragmented)`,因为空闲空间没有得到精心管理。
+
+so there is Fast File System
+
+image::FFS[]
+
+FFS 需要能够在每个组中分配文件和目录,
+each group look likes this
+
+image::FFS group[]
+
+== crash consistency
+在多种奔溃场景中, inode and data block or other relative part is not sync
+
+how to presistent the data structure with situation of  断电(power loss)或系统崩溃(system crash)
+
+== fsck
+File System Checker
+
+check part::
+* 超级块
+* 空闲块
+* inode state
+* indoe link
+* 重复
+* 坏块
+* 目录检查
+
+=== Journal
+日志记录最近的数据操作
+
+write-ahead logging: 基本思路如下。更新磁盘时，在覆写结构之前，首先写下一点小注记（在磁盘上的其
+他地方，在一个众所周知的位置），描述你将要做的事情。写下这个注记就是“预写”部分，
+我们把它写入一个结构，并组织成“日志”。因此，就有了预写日志。
+
+image::journal[]
+
+==== data journaling
+
+image::data journal[]
+
+1.    日志写入: 将事务的内容(包括 TxB 和更新内容)写入日志，等待这些写入完成。
+2.    日志提交: 将事务提交块(包括 TxE)写入日志,等待写完成,事务被认为已提交 (committed)。
+3.    加检查点: 将更新内容写入其最终的磁盘位置。
+4.    释放: 一段时间后，通过更新日志超级块，在日志中标记该事务为空闲。
+
+==== metadata journal
+1.    数据写入：将数据写入最终位置，等待完成（等待是可选的，详见下文）。
+2.    日志元数据写入：将开始块和元数据写入日志，等待写入完成。
+3.    日志提交：将事务提交块(包括 TxE)写入日志,等待写完成,现在认为事务(包括数据)已提交(committed)。
+4.    加检查点元数据：将元数据更新的内容写入文件系统中的最终位置。
+5.    释放：稍后，在日志超级块中将事务标记为空闲。
+
+=== other solution
+* Copy-On-Write(COW)
+* Backpointer-Based Consistency(BBC)
+* Optimistic Crash Consistency
+
+== Log-structrued File System 
+**LFS**
+
+简单地将所有更新(例如数据块、inode 等)顺序写入磁盘的这一基本思想是 LFS 的核心。(a lot problem !)
+
+=== write-buffering
+write into buffer, update a large chunk at one time
+
+=== inode map
+在 inode 号和 inode 之间引入了一个间接层(level of indirection)
+
+=== checkpoint region
+检 查点区域包含指向最新的 inode 映射片段的指针（即地址），因此可以通过首先读取 CR 来很到 inode 映射片段。请注意，检查点区域仅定期更新 ，因此性能不会受到影响。
+
+there is copy in CR, roll-back idea based on this
+
+== distributed system
+=== interaction
+==== UDP
+data might lose, use checksum to check data integrity
+==== realiable protocol
+use **timeout/retry** mechanism, but encounter problem when download mutliple data frames, need to check for specific package
+
+**sequence couter** solve this problem
+
+发送方和接收方就每一方将维护的计数器的起始值达成一致(例如 1)。无论何时发送消息,计数器的当前值都与消息一起发送。此计数器值(N) 作为消息的 ID。发送消息后,发送方递增该值(到 N + 1)。
+
+==== Remote Procedure Call
+to provide abstraction for distributed system, use programming language
+
+the chapter of NFS and AFS is not read(lack of interest)
