@@ -24,11 +24,13 @@ A search problem consists of the following elements::
 * **goal test** : A function that takes a state as input, and determines whether it is a goal state
 
 ### Search Representation
+
 #### Search Space Graphs
 A state space graph is constructed with **states representing nodes**, with directed edges existing from a state to its children. These edges represent actions, and
 any associated weights represent the cost of performing the corresponding action. 
 
 a state space graph is large in memory!
+
 #### Search Tree
 search trees, have no such restriction on the number
 of times a state can appear. This is because though search trees are also a class of graph with states as nodes
