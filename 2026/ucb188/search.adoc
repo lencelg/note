@@ -1,0 +1,121 @@
+# Search
+:stem: asciimath
+:author: lencelg from Arcadia Bay
+:imagesdir: img
+:source-highlighter: highlightjs
+:toc:
+
+## Agent that plan ahead
+**reflex agent** doesn't think about the **consequences of its actions**, but rather selects an action
+based solely on the current state of the world. 
+
+**planning agents** maintain a model of the world and use this model to simulate performing various actions. Then, the
+agent can determine hypothesized consequences of the actions and can `select the best one`. This is simulated
+"intelligence" in the sense that it's exactly what humans do when trying to determine the best possible move
+in any situation - **thinking ahead**.
+
+## Search Problems
+A search problem consists of the following elements::
+* **state space** : The set of all possible states that are possible in your given world
+* A set of **actions** available in each state
+* **transition model** : Outputs the next state when a specific action is taken at current state
+* An **action cost** : Incurred when moving from one state to another after applying an action
+* **start state** : The state in which an agent exists initially
+* **goal test** : A function that takes a state as input, and determines whether it is a goal state
+
+### Search Representation
+#### Search Space Graphs
+A state space graph is constructed with **states representing nodes**, with directed edges existing from a state to its children. These edges represent actions, and
+any associated weights represent the cost of performing the corresponding action. 
+
+a state space graph is large in memory!
+#### Search Tree
+search trees, have no such restriction on the number
+of times a state can appear. This is because though search trees are also a class of graph with states as nodes
+and actions as edges between states, each state/node encodes not just the state itself, but the entire path
+(or plan) from the start state to the given state in the state space graph. 
+
+#### Intuition Of Difference
+image::search graph and search tree[]
+
+## Uniformed Search
+important ideas::
+* Fringe
+* Expansion
+* Exploration Strategy
+
+[source,]
+----
+function TREE-SEARCH(problem, frontier) return a solution or failure
+    frontier← INSERT(MAKE-NODE(INITIAL-STATE[problem]), frontier) while not IS-EMPTY(frontier) do
+    
+    end
+    node ← POP(frontier) if problem.IS-GOAL(node.STATE) then
+
+    end
+    return node
+
+    for each child-node in EXPAND(problem, node) do
+    end
+    add child-node to frontier
+
+return failure
+
+function EXPAND(problem, node) yields nodes 
+    s← node.STATE for each action in problem.ACTIONS(s) do
+    end
+    s' ← problem.RESULT(s, action)
+    yield NODE(STATE=s', PARENT=node, ACTION=action)
+----
+
+Performance Evaluation::
+- **completeness** of each search strategy - if there exists a solution to the search problem, is the strategy guaranteed to find it given infinite computational resources?
+- **optimality** of each search strategy - is the strategy guaranteed to find the lowest cost path to a goal state?
+- **branching factor b** - The increase in the number of nodes on the frontier each time a frontier node is dequeued and replaced with its children is O(b). At depth k in the search tree, there exists O(bk) nodes.
+- maximum depth m.
+- depth of the shallowest solution s.
+
+### Depth-First Search
+DFS
+
+image::DFS[]
+
+`Strategy`: expand a **deepest node first**
+
+`Implementation`: Fringe is a **LIFO stack**
+
+performance::
+* **Completeness** - Depth-first search is not complete. If there exist cycles in the state space graph, DFS will faithfully yet tragically get "stuck" searching for the deepest node
+* **Optimality** - Depth-first search simply finds the **leftmost solution** in the search tree without regard for path costs, and so is not optimal.
+* **Time Complexity** - In the worst case, depth first search may end up exploring the entire search tree. Hence, the runtime of DFS is O(bm).
+* **Space Complexity** - In the worst case, DFS maintains b nodes at each of m depth levels on the frontier. the space complexity of DFS is O(bm).
+
+### Breadth-First Search
+BFS
+
+image::BFS[]
+
+`Strategy`: expand a **shallowest node first**
+`Implementation`: Fringe is a **FIFO queue**
+
+Performance::
+- **Completeness** - it's complete.
+- **Optimality** - BFS is generally not optimal because it simply does not take costs into consideration. The special case where BFS is guaranteed to be **optimal** is **if all edge costs are equivalent**
+- **Time Complexity** - the time complexity is O(bs).
+- **Space Complexity** - Since the shallowest solution is located at depth s, there are O(bs) nodes at this depth.
+
+### Uniformed-Cost Search 
+UCS
+
+image::UCS[]
+
+`Strategy`: expand a **cheapest node first**
+`Fringe`: a **priority queue (priority: cumulative cost)**
+
+Performace::
+- **Completeness** - Uniform cost search is complete. it must have some finite length shortest path to the goal state
+- **Optimality** - UCS is also optimal if we assume all edge costs are nonnegative
+- **Time Complexity** - define the optimal path cost as stem:[C^{*}] and the minimal cost between two nodes
+in the state space graph as ε. Then, we must roughly explore all nodes at depths ranging from 1 to
+stem:[C^{*}/ε], leading to an runtime of O(stem:[b^{C^{*}/ε}] ).
+• **Space Complexity** - Roughly, the frontier will contain all nodes at the level of the cheapest solution, space complexity of UCS is estimated as O(stem:[b^{C^{*}/ε}] ).
