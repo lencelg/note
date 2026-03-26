@@ -1,11 +1,12 @@
-# Search
+= Search
 :stem: asciimath
 :author: lencelg from Arcadia Bay
 :imagesdir: img
 :source-highlighter: highlightjs
 :toc:
+:toclevels: 5
 
-## Agent that plan ahead
+== Agent that plan ahead
 **reflex agent** doesn't think about the **consequences of its actions**, but rather selects an action
 based solely on the current state of the world. 
 
@@ -14,7 +15,7 @@ agent can determine hypothesized consequences of the actions and can `select the
 "intelligence" in the sense that it's exactly what humans do when trying to determine the best possible move
 in any situation - **thinking ahead**.
 
-## Search Problems
+== Search Problems
 A search problem consists of the following elements::
 * **state space** : The set of all possible states that are possible in your given world
 * A set of **actions** available in each state
@@ -23,24 +24,25 @@ A search problem consists of the following elements::
 * **start state** : The state in which an agent exists initially
 * **goal test** : A function that takes a state as input, and determines whether it is a goal state
 
-### Search Representation
+=== Search Representation
+there are two basic way to represent the searh process
 
-#### Search Space Graphs
+==== Search Space Graphs
 A state space graph is constructed with **states representing nodes**, with directed edges existing from a state to its children. These edges represent actions, and
 any associated weights represent the cost of performing the corresponding action. 
 
 a state space graph is large in memory!
 
-#### Search Tree
+==== Search Tree
 search trees, have no such restriction on the number
 of times a state can appear. This is because though search trees are also a class of graph with states as nodes
 and actions as edges between states, each state/node encodes not just the state itself, but the entire path
 (or plan) from the start state to the given state in the state space graph. 
 
-#### Intuition Of Difference
+==== Intuition Of Difference
 image::search graph and search tree[]
 
-## Uniformed Search
+== Uniformed Search
 important ideas::
 * Fringe
 * Expansion
@@ -77,7 +79,7 @@ Performance Evaluation::
 - maximum depth m.
 - depth of the shallowest solution s.
 
-### Depth-First Search
+=== Depth-First Search
 DFS
 
 image::DFS[]
@@ -92,7 +94,7 @@ performance::
 * **Time Complexity** - In the worst case, depth first search may end up exploring the entire search tree. Hence, the runtime of DFS is O(bm).
 * **Space Complexity** - In the worst case, DFS maintains b nodes at each of m depth levels on the frontier. the space complexity of DFS is O(bm).
 
-### Breadth-First Search
+=== Breadth-First Search
 BFS
 
 image::BFS[]
@@ -106,7 +108,7 @@ Performance::
 - **Time Complexity** - the time complexity is O(bs).
 - **Space Complexity** - Since the shallowest solution is located at depth s, there are O(bs) nodes at this depth.
 
-### Uniformed-Cost Search 
+=== Uniformed-Cost Search 
 UCS
 
 image::UCS[]
