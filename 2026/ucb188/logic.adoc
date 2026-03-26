@@ -1,0 +1,17 @@
+# Logic
+:author: lencelg from Arcadia Bay
+:stem: asciimath
+:imagesdir: img
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 5
+
+## Propositional Logic
+just some basic concept of math
+
+image::logic table[]
+
+Entails: a |= b::
+a contains b in set view
+
+## First-order logic

@@ -1,0 +1,72 @@
+# Game
+:author: lencelg from Arcadia Bay
+:stem: asciimath
+:imagesdir: img
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 5
+
+## Types Of Games
+Zero-Sum Games:: 
+    * Agents have opposite utilities 
+    * Pure compeition:One maximizes, the other minimizes
+
+General-Sum Games::
+* Agents have independent utilities
+* Cooperation, indifference, compeition, shifting alliances, and more are all possible
+
+Team Games::
+* Common payoff for all team members
+
+### Minimax
+zero-sum-game algorithm
+
+one try to maxmize score, one try to minimize the score
+
+image::minimax[]
+
+performace::
+* Time: O(stem:[b^{m}])
+* Space: O(bm)
+* just like exhaustive DFS
+
+### Alpha-Beta Pruning
+use to speed up the Minimax algorithm
+
+basic idea: we record the wrost state oppnent that will choose, if one state of other successors tree wrose than the record, then the successors tree of that part should not be explored
+
+the record is alpha value and beta value
+
+image::alpha-beta prunning[]
+
+### Evaluation Function
+EvaluaUon funcUons score non-terminals in depth-limited search
+
+The most common design for an evaluation function is a linear combination of features.
+
+stem:[Eval(s) =  w_{1}f_{1}(s) + w_{2}f_{2}(s) + w_{3}f_{3}(s) + ... + w_{n}f_{n}(s)]
+
+### Expectimax Search
+introduce **randomness** to search
+
+[source,]
+----
+def exp-value(state):
+    initialize v = 0
+    for each successor of state:
+        p = probability(successor)
+        v += p * value(successor)
+    return v
+----
+
+Expectimax Search **can not be prunning** because it need to check out all the successors' evaluation
+
+### Monte Carlo Tree Search
+MCTS combines two important ideas::
+* Evaluation by rollouts : play multiple games to termination from a state s (using a simple, fast rollout policy) and count wins and losses
+* Selective search : explore parts of the tree that will help improve the decision at the root, regardless of depth
+
+the algorithm process
+1. The UCB criterion is used to move down the layers of a tree from the root node until an unexpanded leaf node is reached.
+2. A new child is added to that leaf, and we run a rollout from that child to determine the number of wins from that node.
+3. We update the numbers of wins from the child back up to the root node.

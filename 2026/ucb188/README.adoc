@@ -2,5 +2,12 @@
 # PS
 :author: lencelg from Acradia Bay
 
+link:introduction.adoc[introduction]
 
-high-quality link:https://inst.eecs.berkeley.edu/~cs188/sp24/[official note]
+link:search.adoc[search]
+
+link:game.adoc[game]
+
+link:logic.adoc[logic]
+
+PS: high-quality link:https://inst.eecs.berkeley.edu/~cs188/sp24/[official note]

@@ -3,7 +3,7 @@
 :author: lencelg from Arcadia Bay
 :imagesdir: img
 :source-highlighter: highlightjs
-:toc:
+:toc: left
 :toclevels: 5
 
 == Agent that plan ahead
@@ -108,6 +108,16 @@ Performance::
 - **Time Complexity** - the time complexity is O(bs).
 - **Space Complexity** - Since the shallowest solution is located at depth s, there are O(bs) nodes at this depth.
 
+=== Iterative Deepening
+Idea: get DFS's space advantage with BFS's time / shallow-solution advantages::
+* Run a DFS with depth limit 1. If no solution…
+* Run a DFS with depth limit 2. If no solution…
+* Run a DFS with depth limit 3. …..
+
+`redundant search` when deepening
+
+generally work in low level search, no so bad!
+
 === Uniformed-Cost Search 
 UCS
 
@@ -123,3 +133,106 @@ Performace::
 in the state space graph as ε. Then, we must roughly explore all nodes at depths ranging from 1 to
 stem:[C^{*}/ε], leading to an runtime of O(stem:[b^{C^{*}/ε}] ).
 • **Space Complexity** - Roughly, the frontier will contain all nodes at the level of the cheapest solution, space complexity of UCS is estimated as O(stem:[b^{C^{*}/ε}] ).
+
+=== Comparison
+
+image::uniform search comparison[]
+
+== Informed Search
+UCS is good but slow
+
+If we have some notion of the direction in which we should focus our search, we can significantly improve performance and "hone in" on
+a goal **much more quickly**.
+
+=== Heuristics
+A function that **estimates how close a state is to a goal**
+
+Examples:: 
+* Manhattan distance
+* Euclidean distance
+
+=== Greedy Search
+always selects the frontier node with the **lowest heuristic value** for expansion
+
+image::greedy search[]
+
+**Completeness and Optimality** - not complete and optimal
+
+=== A* Search
+** A\* Search** combine the advantage of UCS and greedy search
+
+A* Search orders by the sum: stem:[f(n) = g(n) + h(n)]
+
+A* Search terminate when we **dequeue a goal**!
+
+**Completeness and Optimality** - A* search is both complete and optimal, if the heuristic is admissable and consistent
+
+==== Admissability and Consistency
+
+A heuristic h is admissible (optimistic) if: stem:[0 <= h(n) <= h^{*}(n)], stem:[h^{*}(n)] is the true cost to a nearest goal!
+
+== Graph Search
+**BFS** should not bother expanding the circled nodes(extra works!), maintain a set of node visited
+
+to use set in A* Search, we need to maintain the consistency of Heuristics
+
+.graph search pseudo code
+[source, console]
+----
+function GRAPH-SEARCH(problem, frontier) return a solution or failure
+    reached ← an empty set
+    frontier← INSERT(MAKE-NODE(INITIAL-STATE[problem]), frontier) while not IS-EMPTY(frontier) do
+    end
+    node ← POP(frontier) if problem.IS-GOAL(node.STATE) then
+    end
+    return node
+    if node.STATE is not in reached then
+    end
+    add node.STATE in reached
+    for each child-node in EXPAND(problem, node) do
+    end
+    frontier ← INSERT(child-node, frontier)
+return failure
+----
+
+== Local Search
+In many optimization problems, **path is irrelevant**; the **goal state is the solution**
+
+image::local search[]
+
+=== Hill Climbing
+[source, ]
+----
+function HILL-CLIMBING(problem) returns a state
+    current ← make-node(problem.initial-state)
+    loop do
+    neighbor ← a highest-valued successor of current
+    if neighbor.value ≤ current.value then
+        return current.state
+    current ← neighbor
+----
+
+**easy to trunk in local minimum and flat regions**
+
+variants::
+* Random restarts
+* Random sideways moves
+
+=== Simulated annealing
+idea: Resembles the annealing process used to cool metals slowly to reach an ordered (low-energy) state
+
+image::simulated annealing algorithm[]
+
+=== Local beam search
+keep track of k threads at each iteration, and choose k best successor states from the threads, if any of threads finds the optimal value the algorithm stops
+
+Local beam search is also susceptible in getting **stuck in “flat" regions** like hill-climbing does. 
+
+**Stochastic beam search**, can alleviate this issue.
+
+=== Genetic Algorithms
+Genetic algorithms use a natural selection metaphor
+* Resample K individuals at each step (selection) weighted by fitness function
+* Combine by pairwise crossover operators, plus mutation to give variety
+
+image::genetic algorithms[]
