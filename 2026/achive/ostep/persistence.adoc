@@ -3,6 +3,7 @@
 :highlightjs-theme: highlight.js
 :toc:
 :imagesdir: img
+:toclevels: 4
 
 == basic I/O device concept
 

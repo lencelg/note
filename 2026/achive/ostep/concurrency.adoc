@@ -3,7 +3,7 @@
 :source-highlighter: highlight.js 
 :imagesdir: img
 :toc:
-
+:toclevels: 5
 == Thread
 多线程(multi-threaded)程序会有多个执行点(多个程序计数器，每个都用于取指令和执行)。
 
