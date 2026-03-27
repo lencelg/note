@@ -14,4 +14,53 @@ image::logic table[]
 Entails: a |= b::
 a contains b in set view
 
-## First-order logic
+**conjunctive normal form**(CNF) is a conjunction of clauses, each of which a disjunction of literals
+
+CNF formalize the propositional logic
+
+1. **Eliminate** stem:[\Leftrightarrow]: expression becomes stem:[(A\Rightarrow (B\vee C))\wedge ((B\vee C)\Rightarrow A)] using **biconditional elimination**.
+2. **Eliminate** stem:[\Rightarrow]: expression becomes stem:[(\neg A\vee B\vee C)\wedge (\neg(B\vee C )\vee A)] using **implication elimination**.
+3. For CNF representation, the "nots" (stem:[neg]) must appear only on literals. Using **De Morgan's** rule we obtain stem:[(\neg A\vee B\vee C)\wedge ((\neg B\wedge \neg C )\vee A)].
+4. As a last step, we apply the **distributivity law** and obtain stem:[(\neg A\vee B\vee C)\wedge (\neg B\vee A )\wedge (\neg C\vee A)]
+
+
+## Propositional Logical Inference
+* **model-checking**: For every possible world, if a is true make sure that is b true too
+* **theorem-proving**: Search for a sequence of proof steps (applications of inference rules) leading from a to b
+* **Sound algorithm**: everything it claims to prove is in fact entailed
+* **Complete algorithm**: every that is entailed can be proved
+
+We draw on two useful theorems to show entailment:
+
+1. stem:[A \models B] **iff** stem:[A \Rightarrow B] is valid. 
+
+    Proving entailment by showing that stem:[A \Rightarrow B] is valid is known as a **direct proof**.
+
+2. stem:[A \models B] **iff** stem:[A \wedge \neg B] is unsatisfiable. 
+
+    Proving entailment by showing that stem:[A \wedge \neg B] is unsatisfiable is known as a **proof by contradiction**.
+
+### Forward Chaining
+basic idea: use permise record to check true(0) and false(great than one) for one symbol and infer new symbol for KB
+
+link:https://inst.eecs.berkeley.edu/~cs188/textbook/logic/forward.html[reference example here]
+
+image::forward chaining algorithm[]
+
+### DPLL
+1. **Early Termination**: Early checking of whether the whole sentence can be judged true or false before all variables are assigned can prevent unnecessary meandering down subtrees.
+2. **Pure Symbol Heuristic**: A pure symbol is a symbol that only shows up in its positive form (or only in its negative form) throughout the entire sentence. Pure symbols can immediately be assigned true or false. For example, in the sentence stem:[(A \vee B) \wedge (\neg B \vee C) \wedge (\neg C \vee A)], we can identify stem:[A]as the only pure symbol and can immediately A assign to true, reducing the satisfying problem to one of just finding a satisfying assignment of $$(\neg B \vee C)$$.
+3. **Unit Clause Heuristic**: A unit clause is a clause with just one literal or a disjunction with one literal and many falses. In a unit clause, we can immediately **assign a value to the literal** since there is only one valid assignment. For example, $$B$$ must be true for the unit clause stem:[(B \vee false \vee \cdots \vee false)]to be true.
+
+image::DPLL[]
+
+## First Order Logic
+
+just some math thing for discrete math
+
+image::first order logic[]
+
+image::first order logic case[]
+
+### First Order Logical Inference
+convert first order logic to propositional logic to do reference
