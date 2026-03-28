@@ -1,5 +1,5 @@
 
-# PS
+# toc
 :author: lencelg from Acradia Bay
 
 link:introduction.adoc[introduction]
