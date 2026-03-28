@@ -1,0 +1,126 @@
+# Probability
+:author: lencelg from Arcadia Bay
+:stem: asciimath
+:imagesdir: img
+:source-highlighter: highlightjs
+:toc:
+:toclevels: 5
+
+## Math
+just some math stuff
+
+A **random variable** represents an event whose outcome is unknown. A **probability distribution** is an assignment of weights to outcomes. Probability distributions must satisfy the following conditions:
+
+stem:[0 \leq P(\omega) \leq 1]
+
+stem:[\sum_{\omega}P(\omega) = 1]
+
+We use the notation stem:[P(A, B, C] to denote the **joint distribution** of the variables stem:[A, B, C]. In joint distributions, ordering does not matter, i.e., stem:[P(A, B, C) = P(C, B, A)].
+
+We can expand a joint distribution using the **chain rule**, also sometimes referred to as the product rule. 
+
+stem:[P(A, B) = P(A | B) P(B) = P(B | A) P(A)]
+
+stem:[P(A_1, A_2, \dots, A_k) = P(A_1) P(A_2 | A_1) \dots P(A_k | A_1, \dots, A_{k-1})]
+
+**Conditional probabilities** assign probabilities to events conditioned on some known facts. For instance, stem:[P(A|B = b)] gives the probability distribution of $$A$$ given that we know the value of stem:[B] equals stem:[b]. Conditional probabilities are defined as:
+
+stem:[P(A|B) = \frac{P(A, B)}{P(B)}.]
+
+Combining the above definition of conditional probability and the chain rule, we get **Bayes' Rule**:
+
+stem:[P(A | B) = \frac{P(B | A) P(A)}{P(B)}]
+
+## Bayesian Network Inference
+In Inference By Enumeration, we follow the following algorithm:
+
+1. Collect all the rows consistent with the observed evidence variables.
+2. Sum out (marginalize) all the hidden variables.
+3. Normalize the table so that it is a probability distribution (i.e., values sum to 1).
+
+For example, if we wanted to compute stem:[P(W | S = \W\i\n\t\e\r)] using the above joint distribution, we'd select the four rows where stem:[S] is winter, then sum out over stem:[T] and normalize. This yields the following probability table:
+
+[cols="1,1,1,1"]
+|===
+| **W** | **S**  | **Unnormalized Sum**   | **Probability**
+
+| sun   
+| winter 
+| stem:[0.10 + 0.15 = 0.25]
+| stem:[0.25 / (0.25 + 0.25) = 0.5]
+
+
+| rain  
+| winter 
+| stem:[0.05 + 0.20 = 0.25$]
+| stem:[0.25 / (0.25 + 0.25) = 0.5$]
+|===
+
+## Bayesian Network Representation
+
+We formally define a Bayes Net as consisting of:
+
+1.A directed acyclic graph of nodes, one per variable stem:[X].
+
+2.A conditional distribution for each node stem:[P(X | A1 ... An)], where stem:[Ai] is the stem:[i]th parent of stem:[X], stored as a **conditional probability table** or CPT. Each CPT has stem:[n+2] columns: one for the values of each of the $$n$$ parent variables stem:[A1 ... An], one for the values of stem:[X], and one for the conditional probability of stem:[X] given its parents.
+
+As an example of a Bayes Net, consider a model where we have five binary random variables described below:
+
+- **B**: Burglary occurs.
+- **A**: Alarm goes off.
+- **E**: Earthquake occurs.
+- **J**: John calls.
+- **M**: Mary calls
+
+image::bys representation[]
+
+In this Bayes Net, we would store probability tables stem:[P(B)], stem:[P(E)], stem:[P(A | B, E)], stem:[P(J | A)] and stem:[P(M | A)].
+
+Given all of the CPTs for a graph, we can calculate the probability of a given assignment using the following rule:
+
+stem:[P(X1, X2, ..., Xn) = \prod_{i=1}^n{P(X_i | parents(X_i))}]
+
+For the alarm model above, we can actually calculate the probability of a joint probability as follows:
+
+stem:[P(-b, -e, +a, +j, -m) = P(-b) \cdot P(-e) \cdot P(+a | -b, -e) \cdot P(+j | +a) \cdot P(-m | +a)]
+
+## Exact Inference in Bayes Nets
+**Variable Elimination**
+
+image::variables elimination[]
+
+## Approximate Inference in Bayes Nets: Sampling
+
+### Piror Sampling
+image::piror sampling[]
+
+[source, python]
+----
+import random
+
+def get_t():
+    if random.random() < 0.99:
+        return True
+    return False
+
+def get_c(t):
+    if t and random.random() < 0.95:
+        return True
+    return False
+
+def get_sample():
+    t = get_t()
+    c = get_c(t)
+    return [t, c]
+----
+
+### Rejection Sampling
+a better version of **piror sampling** , it reject to sample stem:[c] when stem:[t] is not what we want in the last section
+
+### Likelihood Sampling
+image::likelihood sampling[]
+
+### Gibbs Sampling
+In this approach, we first set all variables to some totally random value (not taking into account any CPTs). We then repeatedly pick one variable at a time, clear its value, and resample it given the values currently assigned to all other variables.
+
+image::gibbs sampling[]

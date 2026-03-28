@@ -3,7 +3,7 @@
 :stem: asciimath
 :imagesdir: img
 :source-highlighter: highlightjs
-:toc: left
+:toc:
 :toclevels: 5
 
 ## Propositional Logic

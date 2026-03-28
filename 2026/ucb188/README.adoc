@@ -10,4 +10,8 @@ link:game.adoc[game]
 
 link:logic.adoc[logic]
 
+link:probability.adoc[probability]
+
+link:HMMs.md[HMMs]
+
 PS: high-quality link:https://inst.eecs.berkeley.edu/~cs188/sp24/[official note]
