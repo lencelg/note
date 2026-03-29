@@ -14,4 +14,8 @@ link:probability.adoc[probability]
 
 link:HMMs.md[HMMs]
 
+link:DN%20VPI.md[DN and VPI]
+
+link:MDP.md[MDP]
+
 PS: high-quality link:https://inst.eecs.berkeley.edu/~cs188/sp24/[official note]
