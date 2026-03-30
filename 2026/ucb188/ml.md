@@ -263,3 +263,46 @@ $$\text{Loss}(\mathbf{w}) = \frac{1}{2} (\mathbf{y} - h_{\mathbf{w}}(\mathbf{x})
 we estimate the unknown weights $\mathbf{w}$ via gradient descent. The gradient of the loss function with respect to the weight of coordinate $i$ is given by:
 
 $$\frac{\partial}{\partial w_i} \frac{1}{2} (y - h_{\mathbf{w}}(\mathbf{x}))^2 = -(y - h_{\mathbf{w}}(\mathbf{x})) h_{\mathbf{w}}(\mathbf{x}) (1 - h_{\mathbf{w}}(\mathbf{x})) x_i$$
+
+# Multi-Class Logistic Regression
+**softmax function**
+
+$$P(y=i|\mathbf{f}(\mathbf{x});\mathbf{w}) = \frac{e^{\mathbf{w}_i^T \mathbf{f}(\mathbf{x})}}{\sum_{k=1}^K e^{\mathbf{w}_k^T \mathbf{f}(\mathbf{x})}}$$
+
+**likelihood function**
+
+$$\ell(\mathbf{w}_1, \ldots, \mathbf{w}_K) = \prod_{i=1}^{n} P(y_i | \mathbf{f}(\mathbf{x}_i); \mathbf{w})$$
+
+a way to express the probabilities $P(y_i | \mathbf{f}(\mathbf{x}_i); \mathbf{w})$ in which $y \in \{1, \ldots, K\}$. So for each data point $i$, we define $K$ parameters $t_{i,k}$, $k = 1, \ldots, K$ such that $t_{i,k} = 1$ if $y_i = k$ and $0$ otherwise
+
+so re-expressed linklihood function:
+
+$$\ell(\mathbf{w}_1, \ldots, \mathbf{w}_K) = \prod_{i=1}^{n} \prod_{k=1}^K \left( \frac{e^{\mathbf{w}_k^T \mathbf{f}(\mathbf{x}_i)}}{\sum_{\ell=1}^K e^{\mathbf{w}_\ell^T \mathbf{f}(\mathbf{x}_i)}} \right)^{t_{i,k}}$$
+
+hence, log-likelihood:
+
+$$\log \ell(\mathbf{w}_1, \ldots, \mathbf{w}_K) = \sum_{i=1}^{n} \sum_{k=1}^K t_{i,k} \log \left( \frac{e^{\mathbf{w}_k^T \mathbf{f}(\mathbf{x}_i)}}{\sum_{\ell=1}^K e^{\mathbf{w}_\ell^T \mathbf{f}(\mathbf{x}_i)}} \right)$$
+
+he gradient with respect to $\mathbf{w}_j$ with the fact that $\sum_k t_{i,k} = 1$:
+
+$$\nabla_{\mathbf{w}_j} \log \ell(\mathbf{w}) = \sum_{i=1}^{n} \nabla_{\mathbf{w}_j} \sum_{k=1}^K t_{i,k} \log \left( \frac{e^{\mathbf{w}_k^T \mathbf{f}(\mathbf{x}_i)}}{\sum_{\ell=1}^K e^{\mathbf{w}_\ell^T \mathbf{f}(\mathbf{x}_i)}} \right) = \sum_{i=1}^{n} \left( t_{i,j} - \frac{e^{\mathbf{w}_j^T \mathbf{f}(\mathbf{x}_i)}}{\sum_{\ell=1}^K e^{\mathbf{w}_\ell^T \mathbf{f}(\mathbf{x}_i)}} \right) \mathbf{f}(\mathbf{x}_i)$$
+
+# Neural Networks: Motivation
+to get non-linear separator
+
+**Multi-layer Perceptron**
+
+![](./img/Multi-layer%20Perceptron)
+
+---
+
+**activation function**
+* Step Function: difficult to optimize because not continuous and always have zero derivate
+* Sigmoid Function
+* RELU
+
+---
+
+log-likehood function gradient vector:
+
+$$\nabla_w  \ell (\mathbf{w}) = \left[\frac{\partial \ell(\mathbf{w})}{\partial \mathbf{w}_1}, ..., \frac{\partial \ell(\mathbf{w})}{\partial \mathbf{w}_n}\right].$$
