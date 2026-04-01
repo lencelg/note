@@ -2,9 +2,13 @@
 # toc
 :author: lencelg from Acradia Bay
 
+all the note in markdown form should use markdown preview enhanced plugin in vscode to view the origin content rather than the GFM form
+
 link:introduction.adoc[introduction]
 
 link:search.adoc[search]
+
+link:csp.md[csp]
 
 link:game.adoc[game]
 
@@ -17,5 +21,9 @@ link:HMMs.md[HMMs]
 link:DN%20VPI.md[DN and VPI]
 
 link:MDP.md[MDP]
+
+link:ml.md[ML]
+
+link:rl.md[RL]
 
 PS: high-quality link:https://inst.eecs.berkeley.edu/~cs188/sp24/[official note]
