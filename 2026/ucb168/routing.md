@@ -50,7 +50,7 @@ each router must compute its own part of the answer (possibly without full knowl
 
 The distributed nature of routing protocols also means that we have to account for individual routers failing
 
-# Routing States
+# Routing Protocols
 problem: given rules and packets, how should we forward the packets(which way to send the packets)
 
 **routing state**:
@@ -84,13 +84,82 @@ graph below for a better inituition
 ![](./img/distance-verctor%20protocols)
 
 ##  Distributed Bellman-Ford Algorithm
-basic idea:
-```
-For each destination:
-If you hear about a path to that destination, update the table if:
-    The destination isn’t in the table.
-    The advertised cost, plus the link cost to the neighbor, is better than the best-known cost.
-Then, tell all your neighbors.
-```
-
 ![](./img/bellman%20ford%20algorithm)
+
+basic idea:
+
+**eventful update**:
+There are three occasions where a router might want to send advertisements:
+
+1. Send advertisements when the table changes. These are called triggered updates. The table might change when we accept a new advertisement, or when a new link is added (e.g. new static route), or when a link goes down (e.g. route gets poisoned).
+2. Send advertisements periodically, once every advertisement interval.
+3. Send advertisements when a table entry expires (and gets replaced by poison
+
+**Distance-vecotr Protolcol idea**
+
+For each destination:
+* If you hear about a path to that destination, update the table if:
+    * The destination isn’t in the table.
+    * The advertised cost, plus the link cost to the neighbor, is better than the best-known cost.
+    * The advertisement is from the current next-hop.
+* Advertise to all your neighbors when the table updates, and periodically (advertisement interval).
+* If a table entry expires, delete it.
+    * But don’t advertise back to the next-hop.
+    * …Or, advertise poison back to the next-hop.
+    * Any cost greater than or equal to the maxmium value(example: 16) is advertised as infinity.
+* If a table entry expires, make the entry poison and advertise it.
+
+## Link-State Protocols
+just yet another major class of routing protocols
+
+basic idea: Every router learns the full network graph, and then runs shortest-paths on the graph to populate the forwarding table.
+
+## Comparison
+In distance-vector, when we receive an announcement, we don’t necessarily know all the details about the path we’re accepting. slow to converge
+
+Link-state protocols are good for small local networks, but don’t scale well to the global Internet. 
+
+# Adressing
+An **IP address** is a number that uniquely identifies a **host**
+
+![](./img/hierarchical%20network)
+
+hierarchical network makes the network much more **scalable**
+
+**default route**:
+If the router can’t find any matches, it will eventually match the \*. wildcard
+
+problem: record that In the early Internet, IPv4 addresses had an 8-bit network ID and a 24-bit host ID, it does not meet the demand of large internet
+
+we need to somehow get more ip address
+
+## classful addressing
+![](./img/classful%20addressing)
+
+PS: Classful addressing is now obsolete(过时的) on the modern Internet.
+
+## Classless Inter-Domain Routing
+**CIDR** 
+
+improved version of classful addressing
+
+still have variable-length network IDs, but instead of only 3 different network ID lengths (Class A, B, C), we make the number of fixed bits arbitrary.
+
+example below from official textbook
+```
+If we allocated a 28-bit network ID, the host ID would be 4 bits long (16 possible addresses).
+If we allocated a 29-bit network ID, the host ID would be 3 bits long (8 possible addresses).
+We can’t allocate exactly 10 addresses, but a 28-bit network ID would be sufficient for this company’s purposes.
+There’s a little bit of waste (6 unused addresses), but this is still way better than allocating 256 addresses.
+```
+# Multi-Layered Hierarchical Assignment
+hierarchies can be multi-layered. 
+
+For example, inside a network, an organization can choose to assign specific ranges of addresses to specific sub-organizations (e.g. departments in a company or university).
+
+![](./img/Multi-Layered%20Hierarchical%20Assignment)
+
+# IPv6 Address Notation
+128bits
+
+IPv6 addresses are usually written in hexadecimal 

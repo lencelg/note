@@ -1,3 +1,4 @@
+PS: note made from [introduction to computation and programming using python](https://mitpress.mit.edu/9780262542364/introduction-to-computation-and-programming-using-python/)
 ---
 author: lencelg from Arcadia Bay
 ---
@@ -149,3 +150,8 @@ def maxVal(toConsider, avail):
     """即使背包的容量很大，如果物品重量来自一个相当小的重量
     集合，那么很多物品集合都会具有相同的总重量，这样就极大地缩短了程序运行时间。这称为伪多项式复杂度"""
 ```
+
+**本福德分布**
+令S是一个大的十进制数集合，那么每个非0数字出现的第一位的概率是多少？
+对于一个十进制数的集合，如果第一位数字是d的概率符合$$P(d) = log_{10}(1 + \frac{1}{d})$$
+
