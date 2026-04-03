@@ -202,5 +202,50 @@ ASes can determine whether an advertised path contains a loop by tracing through
 
 ---
 
+**Border router**(BGP Speaker):
+have at least one link to a router in a different AS 
+
+**Interior router**:
+only have links to other routers within the same AS
+
+---
+
+**BGP session** consists of two routers exchanging information between each other.
+
+**external BGP (eBGP)**:
+session is between two routers from different ASes
+
+**internal BGP (iBGP)**:
+session is between two routers in the same AS (not necessarily directly connected by a link).
+
+eBGP and iBGP sessions are different from **interior gateway protocols (IGP)**
 
 
+every router has two forwarding tables.
+* One is a table mapping all internal destinations (same AS) to a next hop, populated with information **from IGP**.
+* The other is a table mapping all external destinations to an egress router (who knows a route to the external destination), populated with information **from eBGP**.
+
+example graph below for better understanding
+
+![](./img/two%20router%20table)
+
+---
+
+some problem: what if one router get multiple message that can get to the same destination, which should the router select
+
+**potato routing**:
+selecting the nearest egress router. We want the packet to leave our AS as soon as possible, and start traveling over somebody else’s links as soon as possible.
+
+**MDE**:
+with additional information of cost, we can select the best one
+
+# IP Header
+header include needed infomation to transmit the packets
+
+ipv4 header:
+
+![](./img/ipv4%20header)
+
+ipv6:
+
+![](./img/ipv6)
