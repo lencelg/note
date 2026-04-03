@@ -152,14 +152,55 @@ If we allocated a 29-bit network ID, the host ID would be 3 bits long (8 possibl
 We can’t allocate exactly 10 addresses, but a 28-bit network ID would be sufficient for this company’s purposes.
 There’s a little bit of waste (6 unused addresses), but this is still way better than allocating 256 addresses.
 ```
-# Multi-Layered Hierarchical Assignment
+## Multi-Layered Hierarchical Assignment
 hierarchies can be multi-layered. 
 
 For example, inside a network, an organization can choose to assign specific ranges of addresses to specific sub-organizations (e.g. departments in a company or university).
 
 ![](./img/Multi-Layered%20Hierarchical%20Assignment)
 
-# IPv6 Address Notation
+## IPv6 Address Notation
 128bits
 
 IPv6 addresses are usually written in hexadecimal 
+
+# Router Hardware
+recall that A router runs some routing protocol to populate the forwarding table.
+
+a router mainly contains three parts:
+|part|desription|
+|:---|:---|
+|Data Plane| mainly responsible for forwarding packets
+|Control Plane| mainly responsible for communicating with other routers and running routing protocols
+|Management Planes|used to tell routers what to do, and see what they are doing. Systems and humans interact with the management plane to configure and monitor the router.
+
+# Model for Inter-Domain Routing
+**autonomous system (AS)**, which is one or more local network(s) all run by the same operator.
+
+there are two types of AS
+|name| descrption|
+|:---|:---|
+| **stub autonomous system**   |only exists to provide Internet connectivity to the hosts in its local networks. 
+| **transit autonomous system**|forwards packets on behalf of other ASes.
+
+AS Graphs are **Acyclic(无环的)**(only in provider-consumer relationship)
+
+**policy-based routing**: 
+each autonomous system has its own business goals and relationships with other ASes, so there are different routing protocols in the LAN of the same operator
+
+# Border Gateway Protocol (BGP)
+BGP is based on Distance-Vector(good for protecting privacy)
+
+---
+
+**Path-Vector Protocol**
+a version modified from Distance-Vector Protocols
+
+it consider the policy of ISP router with perference  and solve the problem of possible loops
+
+ASes can determine whether an advertised path contains a loop by tracing through the path in the advertisement. Specifically, if I receive an advertisement, I just need to check if the path includes myself. That would cause the packet to be sent back to me, creating a loop, so I would ignore that advertisement and not accept or advertise the route with the loop.
+
+---
+
+
+
