@@ -246,6 +246,6 @@ ipv4 header:
 
 ![](./img/ipv4%20header)
 
-ipv6:
+ipv6 header:
 
 ![](./img/ipv6)
