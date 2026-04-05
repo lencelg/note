@@ -102,3 +102,75 @@ running rules:
 * When the protocol begins, every switch thinks that the root is itself, and the cost to the root (itself) is 0.
 * The root in the BPDU has a lower ID. This means that you have discovered a better root. You should abandon your current root and cost, and instead adopt the new root and the path to the new root.
 * The root in the BPDU is the same, but the BPDU is offering a better path to the root. You should adopt the new path to the root.
+
+# ARP
+## Connecting Layers 2 and 3
+recall that we have to add a MAC address to send the packet along the link when send an IP packet which is filled in its destination IP at Layer 3 and passed down to Layer 2
+
+problem: which mac address should we fill in
+
+## Address Resolution Protocol
+ARP allows machines to **translate** an IP address into its corresponding MAC address.
+
+broadcast the request of an IP-to-MAC translation
+
+learn the mapping in ARP table and some local cache
+
+![](./img/ARP%20table)
+## Neighbor Discovery
+used in **ipv6**
+
+neighbor discovery instead multicasts the request to a specific group, and each computer listens on a specific group based on its IP address.
+
+# DHCP
+When a computer first joins the network, we need to know the following information
+* our allocated ip address
+* subnet of mask
+* deafult gateway: the router of local network where we send non-local packets to
+* DNS recrusive resolover
+
+we need a protocol for configing these information
+
+---
+
+Dynamic Host Configuration Protocol
+
+DHCP runs in four steps
+* The new client broadcasts a **Discover** message, asking for configuration information.
+* Any **DHCP server** who can help will unicast an **Offer** to the client, with a configuration that the client can use (e.g. IP address, gateway address, DNS address).
+* The client will broadcast a **Request** message, indicating which offer they accepted. This message is broadcast because the client might get multiple offers. By telling everybody which offer it’s accepting, the client allows the rejected offers to be freed up for future clients.
+* The server sends an acknowledgement to confirm that the request was granted.
+
+---
+
+note that DHCP is a Layer 7 application protocol, and it runs on top of UDP, which itself runs on top of IP.
+
+## Stateless Address Autoconfiguration
+used in **ipv6**
+
+we ask for the local network information, which includes the gateway address, DNS address, and notably, the prefix for the local network. This prefix is usually 64 bits long. Then, we copy our own MAC address bits into the host bits of the IPv6 address.
+
+![](./img/SLAAC)
+
+# NAT
+Network Address Translation
+
+problem: ipv4 address is running out, we need a private ip address
+
+idea: use a single public IP address to represent many hosts in the local network
+
+in the NAT,the router is keeping track of connections using the 5-tuple of 
+* source IP
+* destination IP
+* protocol
+* source port
+* destination port.
+
+to fix the problem when the pravite address hosts ues the same port, the NAT rewritting the port using a fake port and then map it back to the real one
+
+# TLS
+TLS can be thought of as a Layer 4.5 protocol
+
+TLS handshake
+
+![](./img/TLS)
