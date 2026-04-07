@@ -8,3 +8,5 @@ Useless record
 * data100
 * coursera-machine-learning
 * ostep
+* ucb188
+* ucb168
