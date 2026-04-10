@@ -2,6 +2,7 @@
 author: lencelg from Arcadia Bay
 title: Structure and Interpretation Computer Programs javascript version
 ---
+note made from [Structure and Interpretation Computer Programs javascript version](https://sourceacademy.org/sicpjs/index)
 [TOC]
 # 构造函数的抽象
 计算过程：
@@ -131,7 +132,7 @@ e.g, $x => x + 4$
 
 考虑使用conditional语句进行高效的存储来进行计算， 也使用const进行local variable的声明来明了函数的复合计算过程
 
-## 小结
+## 个人小结
 第一章从计算的基础操作讲起，介绍了递归和迭代的计算的过程和区别，再从函数的抽象与结构化对一些问题探讨计算的思路所在，借助javascript语言，函数的设计贴近人类自然语言的描述，最后是高阶函数的抽象并介绍了condition语句、lambda函数等编程工具来更好的进行函数的抽象，对于问题的思路讲解中，书中的例子函数设计与结构化尤为精彩。
 
 # 构造数据的抽象
