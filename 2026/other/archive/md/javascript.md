@@ -2,6 +2,8 @@
 author: lencelg from Arcadia Bay
 title: Structure and Interpretation Computer Programs javascript version
 ---
+> [Notice] this note is **not finished** and **not in consideration**
+
 note made from [Structure and Interpretation Computer Programs javascript version](https://sourceacademy.org/sicpjs/index)
 [TOC]
 # 构造函数的抽象
