@@ -405,6 +405,249 @@ pub fn eat_at_restaurant() {
 
     // 如果取消下一行的注释代码不能编译；
     // 不允许查看或修改早餐附带的季节水果
-    // meal.seasonal_fruit = String::from("blueberries");
+    // meal.seasonal_fruit = String::from("blueberriejs");
+}
+```
+
+# collections
+## Vector
+```rust
+    // create vector with Vec::new() or vec!
+    let v: Vec<i32> = Vec::new();
+    let v = vec![1, 2, 3];
+
+    // update vector with push
+    let mut v = Vec::new();
+    v.push(8);
+
+    // access to vector with [] or get()
+        let v = vec![1, 2, 3, 4, 5];
+
+    let third: &i32 = &v[2];
+    println!("The third element is {third}");
+
+    // get() return an Option, could use for error handling for out of bound access
+    let third: Option<&i32> = v.get(2);
+    match third {
+        Some(third) => println!("The third element is {third}"),
+        None => println!("There is no third element."),
+    }
+
+    // iter an vector
+    let v = vec![100, 32, 57];
+    for i in &v {
+        println!("{i}");
+    }
+```
+
+## String
+```rust
+    // create a string with String::new() 
+    let mut s = String::new();
+
+    // or
+    let data = "initial contents";
+    let s = data.to_string();
+
+    // 该方法也可直接用于字符串字面值：
+    let s = "initial contents".to_string();
+    // same as 
+    let s = String::from("initial contents");
+
+    // append string with push_str
+    let mut s = String::from("foo");
+    s.push_str("bar");
+
+    // notice that Rust 的字符串不支持索引, we use slice
+    let hello = "Здравствуйте";
+    let s = &hello[0..4];
+
+    // iter a string, print out each char
+    for c in "Зд".chars() {
+        println!("{c}");
+    }
+
+    // iter a string, print out each byte value 
+    for b in "Зд".bytes() {
+        println!("{b}");
+    }
+
+    // other method like contains or replace
+```
+## Hash Map
+```rust
+    use std::collections::HashMap;
+    
+    // create a hashmap
+    let mut scores = HashMap::new();
+
+    // insert element
+    scores.insert(String::from("Blue"), 10);
+    scores.insert(String::from("Yellow"), 50);
+
+    // if there is key exist, we do nothing, if not, we insert the key:value pair, return the iterator
+    scores.entry(String::from("Blue")).or_insert(50);
+
+    // if we want to update the old value
+    use std::collections::HashMap;
+
+    let text = "hello world wonderful world";
+
+    let mut map = HashMap::new();
+
+    for word in text.split_whitespace() {
+        let count = map.entry(word).or_insert(0);
+        // use * to dereference it
+        *count += 1;
+    }
+```
+# Error Handling
+rust里面有两大类错误
+* 可恢复的（recoverable）错误: `Result<T, E>`
+* 不可恢复的（unrecoverable）错误: `panic!`
+
+Result enum
+```rust
+enum Result<T, E> {
+    Ok(T),
+    Err(E),
+}
+```
+```rust
+use std::fs::File;
+use std::io::ErrorKind;
+
+fn main() {
+    let greeting_file_result = File::open("hello.txt");
+
+    // we can use match to match error type , but a long chunk of code, isn't it?
+    let greeting_file = match greeting_file_result {
+        Ok(file) => file,
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => match File::create("hello.txt") {
+                Ok(fc) => fc,
+                Err(e) => panic!("Problem creating the file: {e:?}"),
+            },
+            _ => {
+                panic!("Problem opening the file: {error:?}");
+            }
+        },
+    };
+}
+
+use std::fs::File;
+use std::io::ErrorKind;
+
+fn main() {
+    // we can use unwrap_or_else to shorten our code
+    let greeting_file = File::open("hello.txt").unwrap_or_else(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            File::create("hello.txt").unwrap_or_else(|error| {
+                panic!("Problem creating the file: {error:?}");
+            })
+        } else {
+            panic!("Problem opening the file: {error:?}");
+        }
+    });
+}
+```
+
+about `unwrap()`, 如果 `Result` 值是变体 `Ok`，`unwrap` 会返回 `Ok` 中的值。如果 `Result` 是变体 `Err`，`unwrap` 会为我们调用 `panic!`
+```rust
+use std::fs::File;
+
+fn main() {
+    let greeting_file = File::open("hello.txt").unwrap();
+}
+```
+`expect` 方法也允许我们自定义 `panic!` 的错误信息, 这样我们就有更好的报错信息
+```rust
+use std::fs::File;
+
+fn main() {
+    let greeting_file = File::open("hello.txt")
+        .expect("hello.txt should be included in this project");
+}
+```
+我们可以使用`？`来快捷方式来传播错误, 但是记住只能在返回 `Result`、`Option` 或者其它实现了 `FromResidual` 的类型的函数中使用 `?` 运算符。
+```rust
+use std::fs::File;
+use std::io::{self, Read};
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let mut username = String::new();
+
+    File::open("hello.txt")?.read_to_string(&mut username)?;
+
+    Ok(username)
+}
+
+```
+关于上面的操作很常见，所以std::fs里面已经实现了, `fs::read_to_string`它会打开文件、新建一个 `String`、读取文件的内容，并将内容放入 `String`，接着返回它
+```rust
+use std::fs;
+use std::io;
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    fs::read_to_string("hello.txt")
+}
+```
+# Generic, Trait and lifecycle
+## Generic
+similar to cpp
+```rust
+struct Point<X1, Y1> {
+    x: X1,
+    y: Y1,
+}
+
+impl<X1, Y1> Point<X1, Y1> {
+    fn mixup<X2, Y2>(self, other: Point<X2, Y2>) -> Point<X1, Y2> {
+        Point {
+            x: self.x,
+            y: other.y,
+        }
+    }
+}
+
+fn main() {
+    let p1 = Point { x: 5, y: 10.4 };
+    let p2 = Point { x: "Hello", y: 'c' };
+
+    let p3 = p1.mixup(p2);
+
+    println!("p3.x = {}, p3.y = {}", p3.x, p3.y);
+}
+```
+## trait
+trait 定义了某个特定类型拥有可能与其他类型共享的功能, 有点像是interface, 不过是可以为特定的对象实现的, 和java不一样
+
+trait 默认实现允许调用相同 trait 中的其他方法，哪怕这些方法没有默认实现
+```rust
+pub trait Summary {
+    fn summarize_author(&self) -> String;
+
+    fn summarize(&self) -> String {
+        format!("(Read more from {}...)", self.summarize_author())
+    }
+}
+
+impl Summary for SocialPost {
+    fn summarize_author(&self) -> String {
+        format!("@{}", self.username)
+    }
+}
+
+fm main(){
+    let post = SocialPost {
+        username: String::from("horse_ebooks"),
+        content: String::from(
+            "of course, as you probably already know, people",
+        ),
+        reply: false,
+        repost: false,
+    };
+
+    println!("1 new post: {}", post.summarize());
 }
 ```
