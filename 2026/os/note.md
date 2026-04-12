@@ -187,3 +187,112 @@ reason to use thread
 * 线程比进程更轻址级，所以它们比进程更容易（即更快）创建，也更容易撤销。
 * 加快应用程序执行的速度。
 * 真正并行的实现
+
+基于线程和进程模型的构造服务器的三种方法
+
+| 模型 | 特性 |
+|------|------|
+| 多线程 | 并行性、阻塞系统调用 |
+| 单线程进程 | 无并行性、阻塞系统调用 |
+| 有限状态机 | 并行性、非阻塞系统调用、中断 |
+
+各个线程都可以访问*进程地址空间*中的每一个内存地址，所以一个线程可以读、写或甚至清除另一个线程的堆栈．线程之间是**没有保护**的.
+
+
+| 每个进程中的内容 | 每个线程中的内容 |
+|:----------------:|:----------------:|
+| 地址空间 | 程序计数器 |
+| 全局变量 | 寄存器 |
+| 打开文件 | 堆栈 |
+| 子进程 | 状态 |
+| 即将发生的定时器 | __|
+| 信号与信号处理程序 | __|
+| 账户信息 | __|
+
+线程状态(和进程差不多)：
+* 运行
+* 阻塞
+* 就绪
+* 终止。
+
+**每个线程有自己的堆栈**
+
+---
+
+## POSIX thread api
+
+| 线程调用 | 描述 |
+|----------|------|
+| pthread_create | 创建一个新线程 |
+| pthread_exit | 结束调用的线程 |
+| pthread_join | 等待一个特定的线程退出 |
+| pthread_yield | 释放CPU来运行另外一个线程 |
+| pthread_attr_init | 创建并初始化一个线程的属性结构 |
+| pthread_attr_destroy | 删除一个线程的属性结构 |
+
+a simple example
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define NUMBER_OF_THREADS 10
+
+void *print_hello_world(void *tid)
+{
+    /* 本函数输出线程的标识符，然后退出。 */
+    printf("Hello World. Greetings from thread %d\n", tid);
+    pthread_exit(NULL);
+}
+
+int main(int argc, char *argv[])
+{
+    /* 主程序创建10个线程，然后退出。 */
+    pthread_t threads[NUMBER_OF_THREADS];
+    int status, i;
+
+    for(i=0; i < NUMBER_OF_THREADS; i++) {
+        printf("Main here. Creating thread %d\n", i);
+        status = pthread_create(&threads[i], NULL, print_hello_world, (void *)i);
+
+        if (status != 0) {
+            printf("Oops. pthread_create returned error code %d\n", status);
+            exit(-1);
+        }
+    }
+
+    exit(NULL);
+}
+```
+
+## thread implementation
+线程有两种实现方式
+* 用户空间
+* 内核
+
+在用户空间管理线程时，每个进程君要有其专用的**线程表**(thread table)
+
+![](./img/thread%20implementation)
+
+用户空间实现和内核实现各有优缺
+
+人们研究了各种试图将用户级线程的优点和内核级线程的优点结合起来的方法。一种方法是使用**内核级线程**，然后将**用户级线程**与某些或者全部内核线程**多路复用**起来
+
+## Inter Process Communication
+IPC problem
+
+我们定义临界区来帮助避免竞争条件
+
+好的并发协作满足的条件如下：
+1. 任何两个进程不能同时处于其临界区。
+2. 不应对 CPU 的速度和数量做任何假设。
+3. 临界区外运行的进程不得阻塞其他进程。
+4. 不得使进程无限期等待进人临界区．
+
+|实现互斥|描述|
+|---|---|
+|屏蔽中断| 每个进程在刚刚进入临界区后立即屏蔽所有中断，井在就要离开之前再打开中断。屏蔽中断后，时钟中断也被屏蔽, 然而把屏蔽中断的权力交给用户进程是不明智的|
+|锁变量|共享（锁）变量， 0代表没有线程进入临界区，1代表有线程进入临界区, 然而假设一个进程读出锁变社的值并发现它为0, 而恰好在它将其值设置为 1 之前，另一个进程被调度运行，将该锁变为1, 就有两个线程同时进入临界区|
+|严格轮换法|以在一个等待循环中不停地测试(自旋锁(spin lock)), 但浪费CPU时间 |
+| Peterson解法|一种简单的互斥算法|
+|TSL指令|硬件支持的一种方案|
