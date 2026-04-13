@@ -2,6 +2,7 @@
 author: lencelg from Arcadia Bay
 title: Routing
 ---
+[TOC]
 # Routing
 sending packet, two situtations :
 * sending in the LAN: interior gateway protocols (IGPs)
