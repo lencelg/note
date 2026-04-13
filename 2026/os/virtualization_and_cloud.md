@@ -1,6 +1,6 @@
 ---
 author: lencelg from Arcadia Bay
-title: File System
+title:  Virtual Machine
 ---
 this note is made from modern operating system(4th edition) book
 [TOC]
@@ -52,3 +52,15 @@ basic idea: 利用二进制翻译和处理器的特权级
 其他的虚拟机接口方案: **半虚拟化操作(paravirt op)**, 厂商提倡使用一个与虚拟机管理程序无关的接口让内核与任意的虚拟机管理程序交流
 
 I/O虚拟化与内存虚拟化不做介绍
+
+# Case Study: Vmware
+下面主要介绍Vmware的解决方法
+
+虚拟化x86体系结构
+- 半虚拟化: 指定处理器体系结构的可虚拟化子集，并将客户操作系统移植到新定义的平台上。
+- 完全模拟: VMM模拟（而不是直接在硬件上）执行虚拟机的指令, **动态二进制翻译技术** 加速模拟过程
+
+其他内容不做笔记
+
+# personal summary
+虚拟化带来很多优点，人们在虚拟化的研究上经历了cpu虚拟化是否支持的两个阶段，在一套特定的硬件模拟其他系统的指令集还要处理内存、I/O等的本身属于操作系统的虚拟化和一些抽象，可见虚拟化是一个很复杂的东西，实在感叹人们在虚拟化方面取得成就， 书中对与虚拟化做了一个大体的介绍，不失为很好的入门章节，case study依旧是亮点.
