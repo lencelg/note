@@ -134,3 +134,161 @@ CFS 总是优先调度那些 **使用 CPU 时间最少的任务** ，通常是�
 ## linux memory management
 
 ### basic concept
+每个 Linux 进程都有一个地址空间，逻辑上有三段组成： 代码、数据和堆栈段。
+- **代码段** 包含了形成程序可执行代码的机器指令
+- **数据段** 包含了所有程序变址、字符串、数字和其他数据的存储
+- **栈段** 从虚拟地址空间的顶部或者附近开始，井且向低地址空间延伸
+
+下面介绍一些特性
+
+大多数Linux系统支持 **共享代码段**, 数据段和栈段从来不共享，除非是同一个父进程下的子进程，并且仅仅是那些没有被修改的页面 。
+
+下面的例子中两个进程A和 B 拥有相同的代码段。
+
+![](./img/shared%20code%20block)
+
+Linux 中的进程可以通过 **内存映射文件** 来访问文件数据。
+
+![](./img/memory%20map)
+
+### system call
+
+跟内存管理相关的一些系统调用。若遇到错误则返回0s为-1；a和addr是内存地址，len是长度，prot是控制保护，flags是混杂位串，fd是文件描述符，offset是文件偏移
+
+| 系统调用 | 描述 |
+|----------|------|
+| `s=brk(addr)` | 改变数据段大小 |
+| `a=mmap(addr,len,prot,flags,fd,offset)` | 映射文件 |
+| `s=unmap(addr,len)` | 取消映射文件 |
+
+### phsics memory management
+Linux 对物理内存区分以下内存区域 (zone):
+1. ZONE_DMA 和 ZONE_DMA32 : 可以用于 DMA 操作的页。
+2. ZONE_ NORMAL: 正常的，规则映射的页。
+3. ZONE_IDGHMEM: 高内存地址的页．井不永久性映射。
+
+物理内存被分成区域，Linux 为每个区域维护一个 **区域描述符** , 区域描述符包含了每个区域中内存利用情况的信息和一个一个空闲区数组
+
+Linux 维护一个 **页描述符数组** (mem_map) , 页描述符是 page 类型的，而且系统当中的每个物理页框都有一个页描述符。
+
+![](./img/memory%20representation)
+
+### memory allocation
+**伙伴算法**, 二分伙伴算法 可以参考ostep
+
+slab 分配器
+
+### page replacement
+Linux区分四种不同的页面
+* 不可回收的 (unreclaimable)
+* 可交换的 (swappable)
+* 可同步的 (syncable)
+* 可丢弃的 (discardable)
+
+算法不做笔记(lack of interest)
+
+## I/O system
+所有的 I/O 设备都被当作文件来处理，井且通过与访问所有文件同样的 `read` 和 `write` 系统调用来访问。
+
+基本的 Linux I/O 调度器基干最初的 **Linus电梯调度器 (Linus Elevator scheduler)**
+
+![](./img/linux%20io%20system)
+
+其他的内容不做笔记
+
+## file system
+
+下面介绍一些系统调用，具体系统不做笔记
+
+| 系统调用 | 描述 |
+|----------|------|
+| `fd = creat(name, mode)` | 创建新文件的一种方法 |
+| `fd = open(file, how, ...)` | 打开文件读、写或者读写 |
+| `s = close(fd)` | 关闭一个已经打开的文件 |
+| `n = read(fd, buffer, nbytes)` | 从文件中读取数据到一个缓冲区 |
+| `n = write(fd, buffer, nbytes)` | 把数据从缓冲区写到文件 |
+| `position = lseek(fd, offset, whence)` | 移动文件指针 |
+| `s = stat(name, &buf)` | 获取一个文件的状态信息 |
+| `s = fstat(fd, &buf)` | 获取一个文件的状态信息 |
+| `s = pipe(&fd[0])` | 创建一个管道 |
+| `s = fcntl(fd, cmd, ...)` | 文件加锁及其他操作 |
+
+下面是与目录相关的一些系统调用。如果发生错误，那么返回值s是-1，dir是一个目录流，dirent是一个目录项.
+
+| 系统调用 | 描述 |
+|----------|------|
+| `s = mkdir(path, mode)` | 建立新目录 |
+| `s = rmdir(path)` | 删除目录 |
+| `s = link(oldpath, newpath)` | 创建指向已有文件的链接 |
+| `s = unlink(path)` | 取消文件的链接 |
+| `s = chdir(path)` | 改变工作目录 |
+| `dir = opendir(path)` | 打开目录 |
+| `s = closedir(dir)` | 关闭目录 |
+| `drent = readdir(dir)` | 读取一个目录项 |
+| `rewinddir(dir)` | 回转目录使其再次被读取 |
+
+## linux security
+每个用户拥有一个唯一的 **UID(0 ~ 65535)** 的int
+
+用户可以被分组, 有 **GID(组ID)**
+
+UID 为 0 的用户是 **超级用户**
+
+下面是相关的系统调用。当错误发生时，返回值s为-1；uid和gid分别是UID和GID
+
+| 系统调用 | 描述 |
+|----------|------|
+| `s = chmod(path, mode)` | 改变文件的保护模式 |
+| `s = access(path, mode)` | 使用真实的UID和GID测试访问权限 |
+| `uid = getuid()` | 获取真实的UID |
+| `uid = geteuid()` | 获取有效UID |
+| `gid = getgid()` | 获取真实的GID |
+| `gid = getegid()` | 获取有效GID |
+| `s = chown(path, owner, group)` | 改变所有者和组 |
+| `s = setuid(uid)` | 设置UID |
+| `s = setgid(gid)` | 设置GID |
+
+
+# Android
+## introduction
+Android 是开源的系统, 专为运行在移动智能设备上而设计, 它基于 Linux 内核, 只是将少许新的概念引入 Linux 内核之中.
+
+Android 操作系统的大部分是Java程序设计语言编写的, 内核和大量的低层库是用 C 和 cpp 编写的。
+
+## Android architecture
+Android 的体系结构大致如下:
+
+![](./img/andorid%20architecture)
+
+## linux extension
+### wake lock
+当设备的屏幕关闭之时，设备仍然需要工作：它需要能够接听电话呼叫，接收并处理到来的聊天消息数据，以及许多其他事情。
+
+problem: 移动设备上的电源管理不同于传统的计箕机系统, 因此需要进行扩展
+
+wake lock basic idea:
+
+当屏幕打开时，系统总是持有一个唤醒锁，这样就阻止了设备进入睡眠，所以它将保持运行
+
+在屏样关闭时，系统本身一般井不持有唤醒锁，所以只有在某些其他实体持有唤醒锁的条件下才能保持系统不进入睡眠。当没有唤醒锁被持有时、系统进入睡眠，并且只能由干硬件中断才能将其从睡眠中唤醒.
+### out-of-memory Killer
+试图在内存极低时进行恢复。
+
+basic idea: 为每个进程分配一个 “坏度" ( badness) 水平，并且简单地杀死最坏的进程。进程的坏度基于进程正在使用的 RAM数量, 它已经运行了多长时间以及其他因素，目标是杀死大量但愿不太重要的进程。
+
+## Dalvik
+Dalvik 是 Android 操作系统中已停止维护的 **进程虚拟机 (VM)** ，用于执行为 Android 编写的应用程序。
+
+每个应用程序运行在自己的 Linux 进程中，具有自己的 Dalvik 环境， 这是一种进程隔离, 于是 Android 能够借力于 Linux 的功能特性来管理进程
+
+## Binder IPC
+Android 的系统设计特别围绕进程隔离，不但在应用程序之间，而且在系统本身的不同部分之间隔离进程.
+
+problem: 要进行大量的进程间通信，从而在不同的进程之间实现协同．需要做大量的工作并得到正确的结果。
+
+Android 的 Binder进程间通信机制是一个丰富的通用 IPC 设施
+
+# PS
+PS: 关于Andorid Binder的剩余内容及后面不做介绍(lack of interest)
+# personal view
+这一章的case study聚集常见的操作系统，从历史到具体的介绍都很全面，把前面多个章节的内容和操作系统联系起来, 个人认为是书中所有章节中亮点

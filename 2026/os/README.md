@@ -8,5 +8,6 @@ chapter
 * [I/O device](./io_device.md)
 * [Deadlock](./deadlock.md)
 * [Security](./security.md)
+* [Case Study: Unix, linux, Android](./case_study_linux.md)
 
 PS: Multiprocessing chapter not read, lack of interest
