@@ -1,6 +1,6 @@
 ---
 author: lencelg from Arcadia Bay
-title: learning rust
+title: learning rust part1 of RB
 ---
 [TOC]
 # Introduction
@@ -302,7 +302,9 @@ For more information about this error, try `rustc --explain E0277`.
 error: could not compile `enums` (bin "enums") due to 1 previous error
 ```
 # Pattern Matching
+
 one example usage below
+
 ```rust
     fn plus_one(x: Option<i32>) -> Option<i32> {
         match x {
@@ -311,6 +313,37 @@ one example usage below
         }
     }
 ```
+
+another example
+
+```rust
+fn main() {
+    let x = 42;
+
+    match x {
+        0 => {
+            println!("found zero");
+        }
+        // 我们可以匹配多个值
+        1 | 2 => {
+            println!("found 1 or 2!");
+        }
+        // 我们可以匹配迭代器
+        3..=9 => {
+            println!("found a number 3 to 9 inclusively");
+        }
+        // 我们可以将匹配数值绑定到变量
+        matched_num @ 10..=100 => {
+            println!("found {} number between 10 to 100!", matched_num);
+        }
+        // 这是默认匹配，如果没有处理所有情况，则必须存在该匹配
+        _ => {
+            println!("found something else!");
+        }
+    }
+}
+```
+
 可以使用`if let` 和 `let else` 简洁控制流
 
 看看例子就明白了
@@ -592,7 +625,7 @@ fn read_username_from_file() -> Result<String, io::Error> {
     fs::read_to_string("hello.txt")
 }
 ```
-# Generic, Trait and lifecycle
+# Generic, Trait and lifetime
 ## Generic
 similar to cpp
 ```rust
@@ -650,4 +683,119 @@ fm main(){
 
     println!("1 new post: {}", post.summarize());
 }
+```
+### trait bound语法
+可以使用trait作为参数
+```rust
+pub fn notify<T: Summary>(item: &T) {
+    println!("Breaking news! {}", item.summarize());
+}
+```
+or 
+
+```rust
+pub fn notify<T: Summary + Display>(item: &T) 
+```
+
+### where语法
+
+```rust
+fn some_function<T, U>(t: &T, u: &U) -> i32
+where
+    T: Display + Clone,
+    U: Clone + Debug,
+```
+
+### 返回实现了 trait 的类型
+```rust
+fn returns_summarizable() -> impl Summary {
+    SocialPost {
+        username: String::from("horse_ebooks"),
+        content: String::from(
+            "of course, as you probably already know, people",
+        ),
+        reply: false,
+        repost: false,
+    }
+}
+```
+
+### 使用 trait bound 有条件地实现方法
+```rust
+use std::fmt::Display;
+
+struct Pair<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Pair<T> {
+    fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+}
+
+impl<T: Display + PartialOrd> Pair<T> {
+    fn cmp_display(&self) {
+        if self.x >= self.y {
+            println!("The largest member is x = {}", self.x);
+        } else {
+            println!("The largest member is y = {}", self.y);
+        }
+    }
+}
+```
+## 生命周期
+```rust
+&i32        // 引用
+&'a i32     // 带有显式生命周期的引用
+&'a mut i32 // 带有显式生命周期的可变引用
+```
+考虑以下例子
+```rust
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() { x } else { y }
+}
+```
+函数签名表明对于某些生命周期 `'a`，函数会获取两个参数，它们都是与生命周期 `'a` 存在的至少一样长的字符串 slice。函数会返回一个同样也与生命周期 `'a` 存在的至少一样长的字符串 slice。它的实际含义是 `longest` 函数返回的引用的生命周期与函数参数所引用的值的生命周期的较小者一致。
+
+下面的例子不能工作，因为`println!` 时`result`的结果是借用了生命周期小的`string2`, 但是`string2`已经失效了
+```rust
+fn main() {
+    let string1 = String::from("long string is long");
+    let result;
+    {
+        let string2 = String::from("xyz");
+        result = longest(string1.as_str(), string2.as_str());
+    } // result value end here, no more borrow
+    println!("The longest string is {result}");
+}
+```
+
+### 生命周期省略（Lifetime Elision）
+```rust
+fn first_word(s: &str) -> &str {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return &s[0..i];
+        }
+    }
+
+    &s[..]
+}
+```
+考虑到写注解太费时间，rust支持省略部分场景下生命周期的代码规则。编译器支持三条规则
+
+第一条规则是编译器为每一个引用参数都分配一个生命周期参数。换句话说就是，函数有一个引用参数的就有一个生命周期参数：`fn foo<'a>(x: &'a i32)`，有两个引用参数的函数就有两个不同的生命周期参数，`fn foo<'a, 'b>(x: &'a i32, y: &'b i32)`，依此类推。
+
+第二条规则是如果只有一个输入生命周期参数，那么将它赋予给所有输出生命周期参数：`fn foo<'a>(x: &'a i32) -> &'a i32`。
+
+第三条规则是如果方法有多个输入生命周期参数并且其中一个参数是 `&self` 或 `&mut self`，说明这是个方法，那么所有输出生命周期参数被赋予 `self` 的生命周期。
+
+### 静态生命周期
+`'static`的生命周期能够存活于整个程序期间。
+```rust
+let s: &'static str = "I have a static lifetime.";
 ```

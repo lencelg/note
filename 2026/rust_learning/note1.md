@@ -1,6 +1,6 @@
 ---
 author: lencelg from Arcadia Bay
-title: learning rust
+title: learning rust part1 of RBE
 ---
 this bad note made from [Rust By Example](https://doc.rust-lang.org/rust-by-example/index.html)
 
