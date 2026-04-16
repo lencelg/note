@@ -270,7 +270,7 @@ fn main() {
 
 ```
 error[E0373]: closure may outlive the current function, but it borrows `my_string`
-````
+```
 
 mut 和没有 mut 版本的原因都一样
 1. 闭包 || 默认会借用（不可变借用, 也就是 `Fn` ）外部变量 `my_string`
@@ -280,8 +280,206 @@ mut 和没有 mut 版本的原因都一样
 于是我们要么转移所有权（ `move` ），要么使用 `Arc` 等能延长生命周期的智能指针。
 
 # closures
-前面其实已经介绍了一部分闭包了， 教程中的这一部分介绍的是在 `struct` 加入闭包来进行，主要可以内置了特定的捕获方法可以更方便的与结构体使用, 教程里面的例子太常，我就不加入进来了，不过应该是rust by example里面的代码
+前面其实已经介绍了一部分闭包了， 教程中的这一部分介绍的是在 `struct` 加入闭包来进行，主要可以内置了特定的捕获方法可以更方便的与结构体使用, 教程里面的例子太长，我就不加入进来了，不过应该是rust by example里面的代码
 
 [这里给出链接](https://kumakichi.github.io/easy_rust_chs/Chapter_47.html)
 
 # Arc
+`Arc` 的意思是 "atomic reference counter"(原子引用计数器), 每次只写一次数据, 用于多线程访问改写同一个变量
+
+用一个 `Mutex` 把数据包起来，然后用一个 `Arc` 把 `Mutex` 包起来。
+
+下面是一个例子
+
+```rust
+use std::sync::{Arc, Mutex};
+
+fn main() {
+    let my_number = Arc::new(Mutex::new(0));
+
+    let my_number1 = Arc::clone(&my_number);
+    let my_number2 = Arc::clone(&my_number);
+
+    let thread1 = std::thread::spawn(move || { // Only the clone goes into Thread 1
+        for _ in 0..10 {
+            *my_number1.lock().unwrap() +=1; // Lock the Mutex, change the value
+        }
+    });
+
+    let thread2 = std::thread::spawn(move || { // Only the clone goes into Thread 2
+        for _ in 0..10 {
+            *my_number2.lock().unwrap() += 1;
+        }
+    });
+
+    thread1.join().unwrap();
+    thread2.join().unwrap();
+    // data 最后变成了20
+    println!("Value is: {:?}", my_number);
+    println!("Exiting the program");
+}
+```
+
+# channels
+A channel is an easy way to use many threads that send to one place.
+
+用 `std::sync::mpsc` 创建一个channel, `mpsc` 的意思是"多个生产者，单个消费者"
+
+下面是一个例子，任务是将有100万个0的Vec的每个元素增加一， 算是补充的例子
+
+```rust
+use std::sync::mpsc::channel;
+use std::thread::spawn;
+
+fn main() {
+    let (sender, receiver) = channel();
+    let hugevec = vec![0; 1_000_000];
+    let mut newvec = vec![];
+    let mut handle_vec = vec![];
+
+    for i in 0..10 {
+        let sender_clone = sender.clone();
+        let mut work: Vec<u8> = Vec::with_capacity(hugevec.len() / 10); // new vec to put the work in. 1/10th the size
+        work.extend(&hugevec[i*100_000..(i+1)*100_000]); // first part gets 0..100_000, next gets 100_000..200_000, etc.
+        let handle =spawn(move || { // make a handle
+
+            for number in work.iter_mut() { // do the actual work
+                *number += 1;
+            };
+            sender_clone.send(work).unwrap(); // use the sender_clone to send the work to the receiver
+        });
+        handle_vec.push(handle);
+    }
+
+    for handle in handle_vec { // stop until the threads are done
+        handle.join().unwrap();
+    }
+
+    while let Ok(results) = receiver.try_recv() {
+        newvec.push(results); // push the results from receiver.recv() into the vec
+    }
+
+    // Now we have a Vec<Vec<u8>>. To put it together we can use .flatten()
+    let newvec = newvec.into_iter().flatten().collect::<Vec<u8>>(); // Now it's one vec of 1_000_000 u8 numbers
+
+    println!("{:?}, {:?}, total length: {}", // Let's print out some numbers to make sure they are all 1
+        &newvec[0..10], &newvec[newvec.len()-10..newvec.len()], newvec.len() // And show that the length is 1_000_000 items
+    );
+
+    for number in newvec { // And let's tell Rust that it can panic if even one number is not 1
+        if number != 1 {
+            panic!();
+        }
+    }
+}
+```
+
+# 属性
+`#[derive(Debug)]` 这样的类型的代码叫做属性, 属性是给编译器提供信息的小段代码
+
+常见属性如下，意思也很明了
+* `#[allow(dead_code)]`
+* `#[allow(unused_variables)]`
+* `#[warn(unused_variables)]`
+
+其他的就不多说了
+
+# use Box to contain a Trait
+在经典场景下我们可以使用Box来包括error， 可以使用 `dyn` 关键词来捕获error而不用指定
+
+notice: 当在结构体使用时，还要impl Error trait
+
+```rust
+fn returns_errors(input: u8) -> Result<String, Box<dyn Error>> { // With Box<dyn Error> you can return anything that has the Error trait
+
+    match input {
+        0 => Err(Box::new(ErrorOne)), // Don't forget to put it in a box
+        1 => Err(Box::new(ErrorTwo)),
+        _ => Ok("Looks fine to me".to_string()), // This is the success type
+    }
+
+}
+```
+
+# 默认值和建造者模式
+这个很好理解，`Default` trait 可以初始化一个值
+
+`new` trait 可以提供参数来进行初始化，感觉大部分场景下new trait的使用场景更广一些， Default trait应该用的少一些。
+
+# Deref and DerefMut
+`Deref` 是用 `*` 来解引用某些东西的trait, DerefMut 就是可以改变值的解引用的trait
+
+理解和实现也是不难，例子如下, 两个trait的实现代码看起来几乎是一样的。在实现 `DerefMut` 之前，需要先实现 `Deref`
+
+```rust
+use std::ops::{Deref, DerefMut};
+
+struct HoldsANumber(u8);
+
+impl HoldsANumber {
+    fn prints_the_number_times_two(&self) {
+        println!("{}", self.0 * 2);
+    }
+}
+
+impl Deref for HoldsANumber {
+    type Target = u8;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for HoldsANumber { // You don't need type Target = u8; here because it already knows thanks to Deref
+    fn deref_mut(&mut self) -> &mut Self::Target { // Everything else is the same except it says mut everywhere
+        &mut self.0
+    }
+}
+
+fn main() {
+    let mut my_number = HoldsANumber(20);
+    *my_number = 30; // DerefMut lets us do this
+    println!("{:?}", my_number.checked_sub(100));
+    my_number.prints_the_number_times_two();
+}
+```
+
+# macro
+编写宏是非常复杂的
+
+宏实际上不会编译任何东西。它只是接受一个输入并给出一个输出, 然后编译器会检查它是否有意义, 这就是为什么宏就像 "写代码的代码"。
+
+写一个宏我们要使用另外一个宏: `macro_rules!`
+
+一个简单的宏如下
+
+```rust
+macro_rules! give_six {
+    () => {
+        6
+    };
+}
+
+fn main() {
+    let six = give_six!();
+    println!("{}", six);
+}
+```
+
+宏可以接受输入
+
+```rust
+macro_rules! might_print {
+    ($input:expr) => {
+        println!("You gave me: {}", $input);
+    }
+}
+
+fn main() {
+    // 结果就是打印了上面的println! 语句的内容
+    might_print!(6);
+}
+```
+
+# personal view
+easy rust的教程偏向基础的教学，但是中文版的教程是2021年版本的，有一些东西已经不适用了，但也只是极少数，大部分的讲解还是很不错的

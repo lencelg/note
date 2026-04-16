@@ -1,4 +1,4 @@
-note recorded for self learning of rust
+note recorded for self learning of rust, just some bad note
 |file|desription|
 |:---|:---|
 |[Rust By Exampel note part1](./note1.md)| part1 note of [Rust By Example](https://doc.rust-lang.org/rust-by-example/)|
