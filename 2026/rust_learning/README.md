@@ -7,3 +7,4 @@ note recorded for self learning of rust, just some bad note
 |[Rust Book note part2](./note4.md)|part2 note of [Rust Book](https://doc.rust-lang.org/book/)|
 |[tour of rust note](./note5.md)|note of [tour of rust](https://tourofrust.com/index.html)|
 |[easy rust note](./note6.md)|note of [easy rust](https://kumakichi.github.io/easy_rust_chs/Chapter_0.html)|
+|[note of some book](./note7.md)| no description|
