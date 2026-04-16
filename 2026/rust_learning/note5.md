@@ -1,7 +1,8 @@
 ---
 author: lencelg from Arcadia Bay
-title: added note
+title: tour of rust note
 ---
+[TOC]
 # about match
 ```rust
 fn main() {
@@ -28,6 +29,16 @@ fn main() {
             println!("found something else!");
         }
     }
+}
+```
+
+# about ?
+`do_something_that_might_fail()?` is the same as follow
+
+```rust
+match do_something_that_might_fail() {
+    Ok(v) => v,
+    Err(e) => return Err(e),
 }
 ```
 
@@ -104,3 +115,99 @@ fn main() {
 宏 `include_str!` 可以将本地文件中导入文本到程序中
 
 `let hello_html = include_str!("hello.html");`
+
+`concat` 和 `join` 可以以简洁而有效的方式构建字符串。
+
+```rust
+fn main() {
+    let helloworld = ["你好", " ", "世界", "！"].concat();
+    let abc = ["a", "b", "c"].join(",");
+    println!("{}", helloworld);
+    println!("{}",abc);
+}
+```
+
+`format!`将生成的参数化字符串返回
+
+```rust
+fn main() {
+    let a = 42;
+    // return String of 42
+    let f = format!("生活诀窍: {}",a);
+    println!("{}",f);
+}
+```
+
+# about OOP
+Traits 可以从其他 trait 继承方法。
+
+```rust
+struct SeaCreature {
+    pub name: String,
+    noise: String,
+}
+
+impl SeaCreature {
+    pub fn get_sound(&self) -> &str {
+        &self.noise
+    }
+}
+
+trait NoiseMaker {
+    fn make_noise(&self);
+}
+
+trait LoudNoiseMaker: NoiseMaker {
+    fn make_alot_of_noise(&self) {
+        self.make_noise();
+        self.make_noise();
+        self.make_noise();
+    }
+}
+
+impl NoiseMaker for SeaCreature {
+    fn make_noise(&self) {
+        println!("{}", &self.get_sound());
+    }
+}
+
+impl LoudNoiseMaker for SeaCreature {}
+
+fn main() {
+    let creature = SeaCreature {
+        name: String::from("Ferris"),
+        noise: String::from("blub"),
+    };
+    creature.make_alot_of_noise();
+}
+```
+
+方法的执行有两种方式：
+* 静态调度——当实例类型已知时
+* 动态调度——当实例类型未知时, 我们在 trait 类型前加上使用`dyn`
+
+```rust
+// snip form code block above
+fn static_make_noise(creature: &SeaCreature) {
+    // 我们知道真实类型
+    creature.make_noise();
+}
+
+fn dynamic_make_noise(noise_maker: &dyn NoiseMaker) {
+    // 我们不知道真实类型
+    noise_maker.make_noise();
+}
+```
+
+# about raw pointer
+`*const T` - 指向永远不会改变的 T 类型数据的指针。
+`*mut T` - 指向可以更改的 T 类型数据的指针。
+
+```rust
+fn main() {
+    let a = 42;
+    let memory_location = &a as *const i32 as usize;
+    // output the memory_location
+    println!("Data is here {}", memory_location);
+}
+```
