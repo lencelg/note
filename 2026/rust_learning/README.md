@@ -1,3 +1,5 @@
+PS: todo!, some note are not completed
+
 note recorded for self learning of rust, just some bad note
 |file|desription|
 |:---|:---|
