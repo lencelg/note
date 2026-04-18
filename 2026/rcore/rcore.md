@@ -2,7 +2,8 @@
 author: lencelg from Arcadia Bay
 title: note of rcore
 ---
-PS: this is made from[THU rCore-Tutorial-Book-v3](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html)
+# PS: note is not finished, all things about rcore is not in consideration
+PS: this is made from[rCore-Tutorial-Book-v3](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html)
 
 [TOC]
 # Introduction
@@ -23,4 +24,26 @@ PS: this is made from[THU rCore-Tutorial-Book-v3](https://rcore-os.cn/rCore-Tuto
 
 进程的切换(context switch)
 
-![](./img/process%20switch.png)
+![](./img/process%20switch)
+
+# 应用程序与基本执行环境
+这一章节是关于三叶虫LibOS操作系统，大概讲述了系统启动的初始化过程
+
+![](./img/libos)
+
+这里是书中的介绍: 通过上图，大致可以看出Qemu把包含app和三叶虫LibOS的image镜像加载到内存中，RustSBI（bootloader）完成基本的硬件初始化后，跳转到三叶虫LibOS起始位置，三叶虫LibOS首先进行app执行前的初始化工作，即建立栈空间和清零bss段，然后跳转到app去执行。app在执行过程中，会通过函数调用的方式得到三叶虫LibOS提供的OS服务，如输出字符串等，避免了app与硬件直接交互的繁琐过程。
+
+下面是编译流程中不同的目标文件的重新排布
+
+![](./img/rearrge%20data)
+
+# 批处理系统
+
+RISC-V 特权级表格如下：
+
+| 级别 | 编码 | 名称 |
+|------|------|------|
+| 0    | 00   | 用户/应用模式 (U, User/Application) |
+| 1    | 01   | 监督模式 (S, Supervisor) |
+| 2    | 10   | 虚拟监督模式 (H, Hypervisor) |
+| 3    | 11   | 机器模式 (M, Machine) |
