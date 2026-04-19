@@ -118,3 +118,5 @@ $$
 $$
   \mu = np, \quad \sigma = \sqrt{np(1-p)}
 $$
+
+# 假设和推论
