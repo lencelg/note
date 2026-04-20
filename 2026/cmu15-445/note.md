@@ -21,7 +21,7 @@ PS: this note is made from Database System Concepts Seventh Edition
 # relationship model introduction
 这一章节从数学的角度来介绍数据库中的数据关系和运算关系, 可以参考cmu15-445中的笔记
 
-# SQL
+# SQL Introduction
 SQL(Structured Query Language, 结构化查询语言)
 
 ## sql basic type
@@ -141,10 +141,114 @@ where semester='Fall'and year= 2017 and
       S.course_jd= T.course_jd);
 ```
 
+## personal summary
+基础的sql章节主要介绍查询的一些关键字和用法
+
 ## unique
 `unique` 用于测试在一个子查询的结果中是否存在重复元组. 不做例子介绍
 
 ## modify data
 * delete from
 * insert into 
-* update
+* update set
+
+# intermediate sql
+## connection experssion
+**natural join**, 自然连接只考虑在两个关系的模式中都出现的那些属性上取值相同的元组对。和笛卡尔积的cross join不一样
+
+还可以有连接的条件， 使用 `join` 和 `on` 关键字, 下面是一个例子
+
+```sql
+select student.ID as ID, name. dept_name, tot_cred,
+  course_id, sec_id, semester, year, grade
+from student join takes on student.ID= takes.ID;
+```
+
+外连接(outer join)有三种连接方式
+
+| 连接类型 | 保留的元组 | 说明 |
+| --- | --- | --- |
+| **左外连接** (LEFT OUTER JOIN) | 只保留**左边**关系中的所有元组 | 即使右边关系中没有匹配，左边关系的元组也会出现，右边属性填充 NULL |
+| **右外连接** (RIGHT OUTER JOIN) | 只保留**右边**关系中的所有元组 | 即使左边关系中没有匹配，右边关系的元组也会出现，左边属性填充 NULL |
+| **全外连接** (FULL OUTER JOIN) | 保留**两个关系**中的所有元组 | 无论哪一边没有匹配，缺失的一方属性填充 NULL |
+
+默认情况下是内连接(inner join),
+
+## create view
+视图是一种保存了查询语句的虚拟表，像是定义了一个函数但是没有执行, 语法如下：
+
+`create view v as ＜查询表达式＞；`
+
+当构成视图定义的任何关系被更新时，可以马上进行视图维护, 来维持最新状态
+
+## update view
+一般不允许对视图关系进行修改 。
+
+下面了解一下就可以了，只有满足以下所有条件的视图才是可更新的：
+
+1. **`FROM` 子句中只有一个数据库关系**（即只能基于一张基表，不能多表连接）。
+2. **`SELECT` 子句中只包含属性名**，不能包含表达式、聚集函数（如 `SUM`、`COUNT`）或 `DISTINCT` 关键字。
+3. **未出现在 `SELECT` 中的属性必须允许为 `NULL`**：即这些属性没有 `NOT NULL` 约束，也不属于主码的一部分（这样才能在插入时自动补 `NULL`）。
+4. **查询中没有 `GROUP BY` 或 `HAVING` 子句**。
+
+简而言之：**简单到只投影一张表的部分列，且其他列可为空的视图，才是可更新的**。否则视图只读。
+
+## constarints
+* not null;
+* unique;
+* check(＜谓词＞);
+* create assertion \<assertion-name\> check \<predicate\>;
+
+## permission
+SQL 标准包括选择 (select) 、插入 (insert) 、更新 (update) 和删除 (delete) 四种权限 。 
+
+`grant` 语句用于授权
+
+下面的授权语句给数据库用户 Amit 和 Satoshi 授予了 department 关系上的选择权限：
+```sql 
+grant select on department to Amit, Satoshi;
+```
+
+下面的授权语句授予用户 Amit 和 Satoshi 在 department 关系的 budget 属性上的更新权限：
+```sql
+grant update (budget) on department to Amit, Satoshi;
+```
+
+`revoke` 用于收回权限
+
+```sql
+revoke select on department from Amit, Satoshi;
+revoke update (budget) on department from Amit. Satoshi:
+```
+
+## role
+我们可以创建角色， 正如前面的 Amit 和 Satoshi, 我们可以将角色授权给另外一个角色，这样会提高效率
+
+```sql
+-- create a role
+create role instructor,
+
+-- grant a role
+grant select on takes to instructor,
+
+-- create another role
+create role dean;
+
+-- grant a role to another role
+grant instructor to dean;
+
+-- same thing
+grant dean to Satoshi;
+```
+
+后面是视图授权， 模式授权， 权限转移， 权限回收，行级授权的内容, 大概了解一下语法，没做笔记
+
+## personal summary
+中级sql涉及了更多的关键字和语法，大概过了一遍语法，只做了部分笔记
+
+# advanced sql
+这一章节我没有怎么看书，笔记参考cmu15-445,
+
+5 ~ 10章节不做笔记
+
+# data analysis
