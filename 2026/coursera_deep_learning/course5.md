@@ -206,4 +206,4 @@ $$y^{⟨t⟩} = g(W_y[\overrightarrow a^{⟨t⟩},  \overleftarrow a^{⟨t⟩}] 
 
 以 $a^{[2]⟨3⟩}$为例，有 $a^{[2]⟨3⟩} = g(W_a^{[2]}[a^{[2]⟨2⟩}, a^{[1]⟨3⟩}] + b_a^{[2]})$。
 
-# Week2
+use reference note for the rest of the course
