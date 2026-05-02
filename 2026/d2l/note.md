@@ -221,3 +221,63 @@ Sigmoid 函数的导数：
 - **定义**：标签本身的定义发生变化。例如，精神疾病的诊断标准、时尚潮流、工作头衔等随时间或地点改变。
 - **例子**：美国不同地区对“软饮”的称呼（如 soda、pop、coke）分布不同，体现了概念偏移。
 - **影响**：$P(y|x)$ 的分布在不同概念的环境中的翻译不同
+
+# CNN
+## LeNet
+最经典的 CNN 就是 LeNet 了
+
+LeNet（LeNet-5）由两个部分组成：
+- 卷积编码器：由两个卷积层组成;
+- 全连接层密集块：由三个全连接层组成。
+
+![](./img/leNet)
+
+## AlexNet
+AlexNet使用了8层卷积神经网络
+
+![](./img/AlexNet)
+
+## VGG
+经典卷积神经网络的基本组成部分是下面的这个序列：
+- 带填充以保持分辨率的卷积层；
+- 非线性激活函数，如ReLU；
+- 汇聚层，如最大汇聚层。
+
+![](./img/VGG)
+
+## NiN
+VGG和NiN相似
+
+NiN块以一个普通卷积层开始，后面是两个$ 1 X 1 $ 的卷积层。这两个卷积层充当带有ReLU激活函数的逐像素全连接层。
+
+![](./img/NiN)
+
+## GoogLeNet
+书中简化的GoogLeNet一共使用9个Inception块和全局平均汇聚层的堆叠来生成其估计值。
+
+在GoogLeNet中，基本的卷积块被称为 *Inception块* （Inception block）
+
+![](./img/inception)
+
+Inception块相当于一个有4条路径的子网络。它通过不同窗口形状的卷积层和最大汇聚层来并行抽取信息，并使用 $ 1 X 1 $ 卷积层减少每像素级别上的通道维数从而降低模型复杂度。
+
+简化的GoogLeNet一共使用9个Inception块和全局平均汇聚层的堆叠来生成其估计值。
+
+![](./img/googleNet)
+
+## ResNet
+这里函数类动机的内容可作为coursera deeplearning 课程补充
+
+![](./img/resnet%20math)
+
+残差块
+
+![](./img/resduial%20block)
+
+resnet 可以减少梯度减少和梯度爆炸的问题
+
+## DenseNet
+稠密连接网络（DenseNet）在某种程度上是ResNet的逻辑扩展。
+
+![](./img/densenet)
+
