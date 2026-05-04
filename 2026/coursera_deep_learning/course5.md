@@ -92,7 +92,7 @@ $$J = L(\hat y, y) = \sum^{T\_x}_{t=1} L^{⟨t⟩}(\hat y^{⟨t⟩}, y^{⟨t⟩}
 建立语言模型所采用的训练集是一个大型的**语料库（Corpus）**，指数量众多的句子组成的文本
 - 第一步是**标记化（Tokenize）**，即建立字典
 - 然后将语料库中的每个词表示为对应的 one-hot 向量。
-- 需要增加一个额外的标记 EOS（End of Sentence）来表示一个句子的结尾。标点符号可以忽略，也可以加入字典后用 one-hot 向量表示。
+- 需要增加一个额外的标记 \<EOS>（End of Sentence）来表示一个句子的结尾。标点符号可以忽略，也可以加入字典后用 one-hot 向量表示。
 
 对于语料库中部分特殊的、不包含在字典中的词汇，例如人名、地名，可以不必针对这些具体的词，而是在词典中加入一个 UNK（Unique Token）标记来表示。
 
@@ -102,11 +102,11 @@ $$J = L(\hat y, y) = \sum^{T\_x}_{t=1} L^{⟨t⟩}(\hat y^{⟨t⟩}, y^{⟨t⟩}
 
 在第一个时间步中，输入的 $a^{⟨0⟩}$和 $x^{⟨1⟩}$都是零向量，$\hat y^{⟨1⟩}$是通过 softmax 预测出的字典中每个词作为第一个词出现的概率；在第二个时间步中，输入的 $x^{⟨2⟩}$是训练样本的标签中的第一个单词 $y^{⟨1⟩}$（即“cats”）和上一层的激活项$a^{⟨1⟩}$，输出的 $y^{⟨2⟩}$表示的是通过 softmax 预测出的、单词“cats”后面出现字典中的其他每个词的条件概率。以此类推，最后就可以得到整个句子出现的概率。
 
-定义损失函数为：
+损失函数为：
 
 $$L(\hat y^{⟨t⟩}, y^{⟨t⟩}) = -\sum_t y_i^{⟨t⟩} log \hat y^{⟨t⟩}$$
 
-则成本函数为：
+成本函数为：
 
 $$J = \sum_t L^{⟨t⟩}(\hat y^{⟨t⟩}, y^{⟨t⟩})$$
 
@@ -207,3 +207,97 @@ $$y^{⟨t⟩} = g(W_y[\overrightarrow a^{⟨t⟩},  \overleftarrow a^{⟨t⟩}] 
 以 $a^{[2]⟨3⟩}$为例，有 $a^{[2]⟨3⟩} = g(W_a^{[2]}[a^{[2]⟨2⟩}, a^{[1]⟨3⟩}] + b_a^{[2]})$。
 
 use reference note for the rest of the course
+
+# Week2
+## Word embedding
+one-hot 向量将每个单词表示为完全独立的个体，不同词向量都是正交的，因此单词间的相似度无法体现。
+
+特征化: 通过用语义特征作为维度来表示一个词，因此语义相近的词，其词向量也相近。
+
+## analogy reasoning
+词嵌入可用于类比推理。
+
+给定对应关系“男性（Man）”对“女性（Woman）”，想要类比出“国王（King）”对应的词汇。 即$e_{man} - e_{woman} \approx e_{king} - e_? $
+
+于是定义相似度函数：$sim(u, v)$
+
+一个最常用的相似度计算函数是**余弦相似度（cosine similarity）**： $sim(u, v) = \frac{u^T v}{|| u ||_2 || v ||_2}$
+
+## embedding marix
+可以将嵌入学习的结果保存在嵌入矩阵中。
+
+**嵌入矩阵（Embedding Matrix）** $E$: 将字典中位置为 $i$ 的词的 one-hot 向量表示为 $o_i$，词嵌入后生成的词向量用 $e_i$表示，则有：
+
+$$E \cdot o_i = e_i$$
+
+但在实际情况下一般不这么做。因为 one-hot 向量维度很高，且几乎所有元素都是 0，这样做的 **效率太低** 。因此，实践中直接用专门的函数查找矩阵 $E$ 的特定列。
+
+## word embedding learning
+
+### Neural Probabilistic language model
+**神经概率语言模型（Neural Probabilistic Language Model）**构建了一个能够通过上下文来预测未知词的神经网络，在训练这个语言模型的同时学习词嵌入。
+
+![Neural-language-model](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/Neural-language-model.png)
+
+训练过程中，将语料库中的某些词作为目标词，以目标词的部分上下文作为输入，Softmax 输出的预测结果为目标词。嵌入矩阵 $E$ 和 $w$、$b$ 为需要通过训练得到的参数。
+
+在得到嵌入矩阵后，就可以得到词嵌入后生成的词向量。
+
+### Word2Vec
+**Word2Vec** 是一种简单高效的词嵌入学习算法，包括 2 种模型：
+
+* **Skip-gram (SG)**：根据词预测目标上下文
+* **Continuous Bag of Words (CBOW)**：根据上下文预测目标词
+
+每种语言模型又包含**负采样（Negative Sampling）**和**分级的 Softmax（Hierarchical Softmax）**两种训练方法。
+
+训练神经网络时候的隐藏层参数即是学习到的词嵌入。
+
+### Skip-gram
+![new-Skip-Gram](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/new-Skip-Gram.png)
+
+从左到右是 One-hot 向量，乘以 center word 的矩阵 $W$ 于是找到词向量，乘以另一个 context word 的矩阵 $W'$ 得到对每个词语的“相似度”，对相似度取 Softmax 得到概率，与答案对比计算损失。
+
+设某个词为 $c$，该词的一定词距内选取一些配对的目标上下文 $t$，则该网路仅有的一个 Softmax 单元输出条件概率：
+
+$$p(t|c) = \frac{exp(\theta_t^T e_c)}{\sum^m_{j=1}exp(\theta_j^T e_c)}$$
+
+$\theta_t$ 是一个与输出 $t$ 有关的参数，其中省略了用以纠正偏差的参数。损失函数仍选用交叉熵：
+
+$$L(\hat y, y) = -\sum^m_{i=1}y_ilog\hat y_i$$
+
+在此 Softmax 分类中，每次计算条件概率时，需要对词典中所有词做求和操作，因此 **计算量很大**
+
+解决方案之一是使用一个**分级的 Softmax 分类器（Hierarchical Softmax Classifier）**，形如二叉树。在实践中，一般采用霍夫曼树（Huffman Tree）而非平衡二叉树，常用词在顶部。
+
+如果在语料库中随机均匀采样得到选定的词 $c$，则 'the', 'of', 'a', 'and' 等出现频繁的词将影响到训练结果。因此，采用了一些策略来平衡选择。
+
+### CBOW
+CBOW 在新版的视频里面已经不介绍了，只有refernce note里面有介绍
+
+![CBOW](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/CBOW.png)
+
+CBOW 模型的工作方式与 Skip-gram 相反，通过采样上下文中的词来预测中间的词。
+
+### Negative sampling
+为了解决 Softmax 计算较慢的问题，Word2Vec 的作者后续提出了**负采样（Negative Sampling）**模型。
+
+![Defining-a-learning-problem](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/Defining-a-learning-problem.png)
+
+当输入的词为一对上下文-目标词时，标签设置为 1（这里的上下文也是一个词）。另外任意取 k 对非上下文-目标词作为负样本，标签设置为 0。
+
+对于小数据集，k 取 5~20 较为合适；而当有大量数据时，k 可以取 2~5。
+
+改用多个 Sigmoid 输出上下文-目标词（c, t）为正样本的概率：
+
+$$P(y=1 | c, t) = \sigma(\theta_t^Te_c)$$
+
+其中，$\theta_t$、$e_c$ 分别代表目标词和上下文的词向量。
+
+之前训练中每次要更新 n 维的多分类 Softmax 单元（n 为词典中词的数量）。现在每次只需要更新 k+1 维的二分类 Sigmoid 单元，计算量大大降低。
+
+关于计算选择某个词作为负样本的概率，作者推荐采用以下公式（而非经验频率或均匀分布）：
+
+$$p(w_i) = \frac{f(w_i)^{\frac{3}{4}}}{\sum^m_{j=0}f(w_j)^{\frac{3}{4}}}$$
+
+其中，$f(w_i)$ 代表语料库中单词 $w_i$ 出现的频率。这种学习方式更加平滑，能够增加低频词的选取可能。
