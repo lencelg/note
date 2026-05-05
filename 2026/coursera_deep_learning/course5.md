@@ -536,3 +536,53 @@ $$\alpha^{\langle t,t’ \rangle} = \frac{exp(e^{\langle t,t’ \rangle})}{\sum^
 使用 RNN 来实现触发词检测时，可以将触发词对应的序列的标签设置为“1”，而将其他的标签设置为“0”。
 
 ![Trigger-word-detection-algorithm](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/Trigger-word-detection-algorithm.png)
+
+# Week4
+## Transformer intuition
+回想之前的序列模型， 我们必须计算前面的所有结果才能计算最后的输出。
+
+Transformer 架构能够并行的计算整个序列
+
+Transformer 的主要创新是结合了注意力和CNN
+
+## self-attention
+**Transformer 模型中的缩放点积注意力（Scaled Dot-Product Attention）**
+- \( q \)：查询向量（Query）
+- \( K \)：键向量序列（Keys），\( k^{<i>} \) 表示第 \( i \) 个键
+- \( V \)：值向量序列（Values），\( v^{<i>} \) 表示第 \( i \) 个值
+
+公式计算步骤：
+1. 对于每个 \( i \)，计算 \( q \) 与 \( k^{<i>} \) 的点积 \( q \cdot k^{<i>} \)。
+2. 用 softmax 将这些点积归一化为权重：  
+   \[
+   \frac{\exp(q \cdot k^{<i>})}{\sum_j \exp(q \cdot k^{<j>})}
+   \]
+3. 用这些权重对对应的 \( v^{<i>} \) 进行加权求和，得到最终的上下文向量 \( A(q, K, V) \)。
+
+总的公式如下：
+\[
+A(q,K,V) = \sum_i \frac{\exp(q\cdot k^{<i>})}{\sum_j \exp(q\cdot k^{<j>})} v^{<i>}
+\]
+
+实际实现中还会除以 \( \sqrt{d_k} \) 进行缩放，以避免点积过大影响梯度。
+
+并行计算的想法如下：
+
+e.g 要计算$A^{<3>}$的值， 我们计算其与周围token的注意力公式， 如上所示
+
+![](./img/self-attention)
+
+## Multi-Head attention
+多头注意机制可以理解成for循环中不断计算自注意力机制
+
+每个注意力头可以关注不同的信息， 这样模型可以同时关注来自不同位置、不同表示空间的信息（比如语法关系、语义相似性、指代关系等）。
+
+对于不同的注意力头的参数是不一样，于是可以对每一个头进行并行计算。
+
+## Transformer details
+使用encoder-decoder模型构建网络，有几个细节
+- 使用 posistion encoding 来在self-attention中嵌入词的位置信息
+- 使用 add & norm 来加速学习， 可以理解为类似 BatchNorm 层
+- 在训练中的 decoder 的query中使用 masked multi-head attention 来进行训练， masked的意义是模型可以准确的输出前几个次的情况下，遮住后面的词来衡量模型的后续输出的质量
+
+![](./img/transformer%20detail)
