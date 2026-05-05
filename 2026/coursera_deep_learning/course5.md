@@ -301,3 +301,69 @@ $$P(y=1 | c, t) = \sigma(\theta_t^Te_c)$$
 $$p(w_i) = \frac{f(w_i)^{\frac{3}{4}}}{\sum^m_{j=0}f(w_j)^{\frac{3}{4}}}$$
 
 其中，$f(w_i)$ 代表语料库中单词 $w_i$ 出现的频率。这种学习方式更加平滑，能够增加低频词的选取可能。
+
+### Glove Vectors
+**GloVe（Global Vectors）** 是另一种流行的词嵌入算法。
+
+Glove 模型基于语料库统计了词的**共现矩阵**$X$，$X$中的元素 $X_{ij}$ 表示单词 $i$ 和单词 $j$ “为上下文-目标词”的次数。用梯度下降法最小化以下损失函数：
+
+$$J = \sum^N_{i=1}\sum^N_{j=1}f(X_{ij})(\theta^t_ie_j + b_i + b_j - log(X_{ij}))^2$$
+
+其中，$\theta_i$、$e_j$是单词 $i$ 和单词 $j$ 的词向量；$b_i$、$b_j$；$f()$ 是一个用来避免 $X_{ij}=0$时$log(X_{ij})$为负无穷大、并在其他情况下调整权重的函数。$X_{ij}=0$时，$f(X_{ij}) = 0$。
+
+“为上下文-目标词”可以代表两个词出现在同一个窗口。此时$\theta_i$ 和 $e_j$ 是完全对称的。因此在训练时可以一致地初始化二者，使用梯度下降法处理完以后取平均值作为二者共同的值。
+
+各种词嵌入算法学到的词向量实际上大多都超出了人类的理解范围，难以从某个值中看出与语义的相关程度。
+
+## Sentiment classification
+情感分类是指分析一段文本对某个对象的情感是正面的还是负面的。
+
+情感分类的问题之一是标记好的训练数据不足。但是有了词嵌入得到的词向量，中等规模的标记训练数据也能构建出一个效果不错的情感分类器。
+
+使用 RNN 能够实现一个效果不错的情感分类器：
+
+![RNN-sentiment-classification](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/RNN-sentiment-classification.png)
+
+## Debiasing word embeddings
+problem: 语料库中可能存在性别歧视、种族歧视、性取向歧视等非预期形式偏见（Bias），这种偏见会直接反映到通过词嵌入获得的词向量。
+
+**1. 中和本身与性别无关词汇**
+
+对于“医生（doctor）”、“老师（teacher）”、“接待员（receptionist）”等本身与性别无关词汇，可以**中和（Neutralize）**其中的偏见。
+
+首先用“女性（woman）”的词向量减去“男性（man）”的词向量，得到的向量 $g=e_{woman}−e_{man}$ 就代表了“性别（gender）”。假设现有的词向量维数为 50，那么对某个词向量，将 50 维空间分成两个部分：与性别相关的方向 $g$ 和与 $g$ **正交** 的其他 49 个维度 $g_{\perp}$。如下左图：
+
+![Neutralize](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/Neutralize.png)
+
+而除偏的步骤，是将要除偏的词向量（左图中的 $e_{receptionist}$）在向量 $g$ 方向上的值置为 0，变成右图所示的 $e^{debiased}_{receptionist}$。
+
+公式如下：
+
+$$e^{bias_component} = \frac{e*g}{||g||_2^2} * g$$
+$$e^{debiased} = e - e^{bias\_component}$$
+
+**2. 均衡本身与性别有关词汇**
+
+对于“男演员（actor）”、“女演员（actress）”、“爷爷（grandfather）”等本身与性别有关词汇，中和“婴儿看护人（babysit）”中存在的性别偏见后，还是无法保证它到“女演员（actress）”与到“男演员（actor）”的距离相等。
+
+对这样一对性别有关的词，除偏的过程是**均衡（Equalization）** 它们的性别属性。其核心思想是确保一对词（actor 和 actress）到 $g_{\perp}$ 的距离相等。
+
+![Equalization](https://raw.githubusercontent.com/bighuang624/Andrew-Ng-Deep-Learning-notes/master/docs/Sequence_Models/Equalization.png)
+
+公式：
+
+$$ \mu = \frac{e_{w1} + e_{w2}}{2}$$ 
+
+
+$$\mu_{B} = \frac {\mu * bias\\_axis}{||bias\\_axis||_2} + ||bias\\_axis||_2 *bias\\_axis$$ 
+
+$$\mu_{\perp} = \mu - \mu_{B}$$
+
+
+$$e_{w1B} = \sqrt{ |{1 - ||\mu_{\perp} ||^2_2} |} * \frac{(e_{\text{w1}} - \mu_{\perp}) - \mu_B} {|(e_{w1} - \mu_{\perp}) - \mu_B)|}$$
+
+$$e_{w2B} = \sqrt{ |{1 - ||\mu_{\perp} ||^2_2} |} * \frac{(e_{\text{w2}} - \mu_{\perp}) - \mu_B} {|(e_{w2} - \mu_{\perp}) - \mu_B)|}$$
+
+$$e_1 = e_{w1B} + \mu_{\perp}$$
+
+$$e_2 = e_{w2B} + \mu_{\perp}$$
