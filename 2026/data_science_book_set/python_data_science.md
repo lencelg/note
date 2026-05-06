@@ -2,6 +2,8 @@
 author: lencelg from Arcadia Bay
 title: note of python data science book set
 ---
+this note is made from data science book set
+
 PS: 这是一套书籍，很多内容, 每周抽点时间看一看
 
 >立个flag: 完成这个note
