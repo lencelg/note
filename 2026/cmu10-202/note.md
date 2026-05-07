@@ -206,4 +206,37 @@ MLP 是 Multi-Layer Perceptron（多层感知机）的缩写, 在 Transformer �
 
 notice that \( Y \in \mathbb{R}^{T \times V} \) and \( W_O \in \mathbb{R}^{V \times d} \)
 
+## posistion embedding
+
 记得multihead-attention是具有全局混合能力的，于是transoformer无法捕获输入的位置信息，于是考虑进行 **位置嵌入(posistion embedding)**
+
+教授介绍了几种方法。
+
+- Absolute positional embedding: adding a fixed (different) embedding to each position of X
+
+1. \( X = X_{oh} W_E^T + P \)
+
+notice that \(P \in \mathbb{R}^{T \times d}\) is fixed matrix with different rows, and P contains the posistion information
+
+\[P = 
+\begin{bmatrix}
+p_1^T \\
+p_2^T \\
+...   \\
+p_T^T \\
+\end{bmatrix}\]
+
+其他就是在softmax上做改动。
+
+Other methods  
+
+-  \[  SelfAttn(Q, K, v) = \text{softmax} \left( \frac{QK^T}{\sqrt{d}} - D \right) v\]
+
+- \[SelfAttn(Q, K, v) = softmax \left(\frac{QD^KT^T}{\sqrt{d}}\right)v\]
+
+## masked self-attention
+记得矩阵左乘以后是一个满矩阵， 将部分\(A\)的对角线的元素以后全部设置为零就可以实现mask了，通常是加上一个mask矩阵\(M\)然后再进行softmax
+
+附教授的板书加以理解
+
+![](./img/masked%20self%20attention.png)
