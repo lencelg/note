@@ -87,3 +87,52 @@ L_{CE} = -\log\left( \frac{e^{\hat{y}_y}}{\sum_j e^{\hat{y}_j}} \right)
 = -\left[ \hat{y}_y - \log \sum_j e^{\hat{y}_j} \right]
 = -\hat{y}_y + \log \sum_{j=1}^K e^{\hat{y}_j}
 \]
+
+# Lec 10: Structured input models
+前面几节没什么好做笔记的
+
+outline
+- Language Modeling
+- Unstructured to structured inputs
+- Three operations of structured inputs models
+- Example (beyond text)
+
+首先介绍的例子是预测下一个词, 输入用 one-hot 的词库向量表示，然后把每个词库里的词的 one-hot 堆叠在一起形成一个大的向量，这是无结构化的输入
+
+结构化就是不形成一个向量，而是堆叠成一个矩阵，如果词库中有 $ n $ 个词，输入有 $ d $ 个词， 那么输入的 one-hot matrix input $\in R^{n \times d}$
+
+三种运算
+- 矩阵右乘运算可以让参数进行预测形成输出
+- 矩阵左乘运算可以捕获更多的信息， e.g. 输入的位置关系
+- 非线性运算用在激活函数
+
+# Lec 11: Self Attention
+outline
+- LLM settings
+- The self-attention operation
+- (Soft) lookup table interpretation
+- Properties of self-attention
+- Multi-head attention
+
+记得上节课的矩阵左乘可以捕获更多信息，于是自注意力运算可以算是矩阵左乘和右乘的混合
+
+**The self-attention operation**
+
+\[X \in \mathbb{R}^{T \times d}\]
+
+\[Y = \text{SelfAtt}(X)\]
+
+1. **Form three matrices**  
+   \[ Q, K, V \in \mathbb{R}^{T \times d} \]
+
+   \[   Q = XW_Q^T, \quad K = XW_K^T, \quad V = XW_V^T\]
+
+   \[   W_{Q,K,V} \in \mathbb{R}^{d \times d}\]
+
+2. **Output self-attention operation**  
+
+   \[   Y = \text{SelfAtt}(Q, K, V)\]
+
+   \[   = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V\]
+
+the output $y \in \mathbb R^{T \times d}$
