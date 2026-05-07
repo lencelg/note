@@ -136,3 +136,74 @@ outline
    \[   = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right)V\]
 
 the output $y \in \mathbb R^{T \times d}$
+
+教授解释的例子是python的字典查询，有键、值、查询。
+
+经过softmax后考虑得到的某个row元素较大并且接近1, 其他自然就接近0了，左乘以后算是筛选了$v$中的某一行元素，其他行的信息很少，这就相当与专注了某一部分信息。
+
+然后对于每个$q_i, i \in T$都做同样的查询看看哪一部分与它接近并返回查询的值.
+
+下面附教授的板书
+
+![](./img/look%20up%20table%20interpation.png)
+
+## properties of self-attention
+
+自注意力运算的性质
+1. 与$X$内的行排序无关，于是自注意力运算可以看作是集合运算
+2. 自注意力的 **全局混合能力** : Every output row can depend on every input row (full mixings over rows) \( A(x) \times w_v \)
+
+由于全局混合能力能够根据未来的词来预测过去的词，于是在language model中使用 masked self attention 来去除这种能力的影响
+
+## multi-head self-attention
+base idea: **多角度捕捉依赖** ：不同的头可以关注序列中不同的语义关系（如局部语法、长距离依赖、不同位置交互）。然而单一的self-attention的参数是一样的，无法做到这一点.
+
+basic steps
+1. \( Q = XW_Q^T, \quad K = XW_K^T, \quad V = XW_V^T \)
+
+2. Partition each \( Q, K, V \) by columns in different group called "heads"
+
+\[Q = 
+\begin{bmatrix}
+Q_1 & Q_2 & \cdots & Q_n
+\end{bmatrix}\text{(same for K, V)}\] 
+
+\[Q_i, K_i, V_i \in \mathbb R^{T \times \frac{d}{n}}\]
+
+\[ W_P \in \mathbb{R}^{T \times d} \]
+
+4. \( Y = [\text{selfAttn}(Q_1, K_1, V_1) \cdots \text{selfAttn}(Q_n, K_n, V_n)] W_P \) 
+
+# Lec 12: Transformers
+outline
+- Transformer Layers + Transformer
+- Parallel prediction
+- Positional encoding / embedding
+- Masked attention
+
+# Transformer Layers and Transformers
+
+**Transformer Layer** = self-attention + two-layer MLP + normalization + residual connections
+
+**Transformer** = Embeddings + (Nx) Transformer Layers + normalization + output linear layer
+
+**Transformers Layer (x)**  
+1. \( Z = X + \text{MultiheadAttn}(\text{norm}(x)) \)
+2. \(\text{Return } Y = Z + \text{MLP}(\text{norm}(Z)) \)
+3. \(MLP(z) = \sigma(2w_1^T w_2^T)\)
+
+Norm (x) = \(\frac{x}{||x||_{2}} = x / \sqrt{\sum_{i=1}^d x_i^2}\)
+
+MLP 是 Multi-Layer Perceptron（多层感知机）的缩写, 在 Transformer 的上下文中，每个 Transformer 层中的 MLP 通常是一个两层的全连接前馈网络（FFN），并带有非线性激活函数（常用 ReLU 或 GELU）。
+
+- Transformer \( (X_{oh}) \)  
+  1. \( X := X_{oh} W_E^T \in \mathbb{R}^{d \times v} \)  
+  2. Repeat \( N \) times:  
+    \[
+    X := \text{TransformerLayer}_i(X), i \in N
+    \]  
+  3. Output \( Y = \text{norm}(X) W_O^T \)  
+
+notice that \( Y \in \mathbb{R}^{T \times V} \) and \( W_O \in \mathbb{R}^{V \times d} \)
+
+记得multihead-attention是具有全局混合能力的，于是transoformer无法捕获输入的位置信息，于是考虑进行 **位置嵌入(posistion embedding)**
