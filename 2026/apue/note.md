@@ -230,7 +230,211 @@ main(void)
 这一章不做笔记介绍
 
 # file I/O
-在 <unistd.h> 中定义了三个常量：
+在 <unistd.h> 中定义了三个常量, 与文件描述符有关：
 - `STDIN_FILENO` : 0
 - `STDOUT_FILENO`: 1
 - `STDERR_FILENO`: 2
+
+---
+
+`open` and `openat`
+
+```c
+#include <fcntl.h>
+// 两函数的返回值：若成功，返回文件描述符；若出错，返回-1
+
+int open(const char *path, int oflag, ... /* mode_t mode */);
+
+int openat(int fd, const char *path, int oflag, ... /* mode_t mode */);
+```
+
+path 参数是要打开或创建文件的名字，oflag有多个选项
+
+常见的oflag如下
+
+> 前 5 个常量（`O_RDONLY`、`O_WRONLY`、`O_RDWR`、`O_EXEC`、`O_SEARCH`）必须且只能指定其中一个；其余为可选常量。
+
+| 常量 | 说明 |
+|------|------|
+| `O_RDONLY` | 只读打开。 |
+| `O_WRONLY` | 只写打开。 |
+| `O_RDWR` | 读、写打开。 |
+| `O_EXEC` | 只执行打开。 |
+| `O_SEARCH` | 只搜索打开（应用于目录）。目前支持的操作系统较少。 |
+| `O_APPEND` | 每次写时都追加到文件的尾部。 |
+| `O_CLOEXEC` | 把 `FD_CLOEXEC` 设置为文件描述符标志。 |
+| `O_CREAT` | 若文件不存在则创建。需同时指定第 3 个参数 `mode`。 |
+| `O_DIRECTORY` | 如果 `path` 引用的不是目录，则出错。 |
+| `O_EXCL` | 与 `O_CREAT` 同时使用，若文件已存在则出错。 |
+| `O_NOCTTY` | 如果 `path` 引用终端设备，不将其分配为控制终端。 |
+| `O_NOFOLLOW` | 如果 `path` 引用符号链接，则出错。 |
+| `O_NONBLOCK` | 如果 `path` 引用 FIFO、块特殊文件或字符特殊文件，则使用非阻塞模式。 |
+
+---
+
+`create`, 返回值：若成功，返回为只写打开的文件描述符；若出错，返回-1
+
+```c
+#include <fcntl.h>
+
+int creat(const char *path, mode_t mode);
+```
+
+等效于
+```c
+open(path, O_WRONLY | O_CREAT | O_TRUNC, mode)
+```
+- `create` 的缺点：以**只写**方式打开所创建的文件。
+
+---
+
+`close` 函数
+```c
+#include <unistd.h>
+int close(int fd);
+```
+- **返回值**：成功返回 `0`，出错返回 `-1`。
+- 关闭一个文件时，还会释放该进程在该文件上施加的**记录锁**。
+
+**当前文件偏移量(current file offset)**是一个非负整数，用以度量从**文件开始处**计算的字节数。
+- 通常，读、写操作从**当前文件偏移量**开始。
+- 读写完成后，偏移量增加所读/写的字节数。
+
+---
+
+`lseek` 函数: 显式地设置文件的偏移量。
+```c
+#include <unistd.h>
+
+off_t lseek(int fd, off_t offset, int whence);
+```
+- **返回值**：若成功，返回新的文件偏移量；若出错，返回 `-1`。
+
+`offset` 参数的解释与 `whence` 有关
+- 若 `whence` 是 `SEEK_SET`，则将该文件的偏移量设置为距文件开始处 `offset` 个字节。
+- 若 `whence` 是 `SEEK_CUR`，则将该文件的偏移量设置为其当前值加 `offset`，`offset` 可为正或负。
+- 若 `whence` 是 `SEEK_END`，则将该文件的偏移量设置为文件长度加 `offset`，`offset` 可正可负。
+
+代码示例如下
+
+```c
+#include "apue.h"
+int
+main(void)
+{
+    if (lseek(STDIN_FILENO, 0, SEEK_CUR) == -1)
+        printf("cannot seek\n");
+    else
+        printf("seek OK\n");
+    exit(0);
+}
+```
+
+输出如下
+
+```console
+$ ./a.out < /etc/passwd
+seek OK
+$ cat < /etc/passwd| ./a.out
+cannot seek
+$ ./a.out < /var/spool/cron/FIFO
+cannot seek
+```
+
+---
+
+`read` —— 从打开的文件中读取数据
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t count);
+```
+
+`write` —— 向打开的文件写数据
+```c
+#include <unistd.h>
+ssize_t write(int fd, const void *buf, size_t count);
+```
+返回值：读到的字节数，若已到文件尾，返回 0；若出错，返回 -1
+
+---
+
+在介绍文件共享之前，先了解一下内核中一些 I/O 的数据结构。
+
+内核使用 **3 种数据结构** 表示打开文件，它们之间的关系决定了在文件共享方面一个进程对另一个进程可能产生的影响。
+
+1. 进程级文件描述符表
+每个进程在进程表中都有一个记录项，其中包含一张**打开文件描述符表**（可视为一个矢量，每个描述符占用一项）。  
+与每个文件描述符相关联的是：
+- **a. 文件描述符标志**（如 `close_on_exec`）
+- **b. 指向一个文件表项的指针**
+
+2. 系统级文件表
+内核为所有打开文件维护一张**文件表**。每个文件表项包含：
+- **a. 文件状态标志**（读、写、同步、非阻塞等）
+- **b. 当前文件偏移量**
+- **c. 指向该文件 v 节点表项的指针**
+
+3. v 节点（v-node）
+每个打开文件（或设备）都有一个 **v 节点** 结构，包含：
+- 文件类型
+- 对此文件进行各种操作的函数指针
+- 对于大多数文件，v 节点还包含该文件的 **i 节点（索引节点）**  
+  - i 节点在打开文件时从磁盘读入内存，包含所有相关信息（如文件所有者、文件长度、指向磁盘数据块的指针等）
+
+附图表加以理解
+
+![](./img/data.png)
+
+---
+
+多进程写文件的数据竞争
+- 多个进程同时写同一个文件可能存在**数据竞争**问题。
+- 解决方案：使用 **`pread`** 和 **`pwrite`** 等扩展函数，它们允许**原子性定位并执行 I/O**。
+
+调用 `pread` 相当于调用 `lseek` 后调用 `read`，但是 `pread` 又与这种顺序调用有下列重要区别。
+- 调用 `pread` 时，无法中断其定位和读操作。
+- 不更新当前文件偏移量。
+
+调用 `pwrite` 相当于调用 `lseek` 后调用 `write`，但也与它们有类似的区别。
+
+---
+
+复制文件描述符
+- **`dup`** 和 **`dup2`** 用于复制一个现有的文件描述符, `dup2`是一个原子操作
+- 两函数的返回值：若成功，返回新的文件描述符；若出错，返回-1
+
+```c
+#include <unistd.h>
+
+int dup(int fd);
+
+int dup2(int fd, int fd2);
+```
+
+---
+
+缓冲区一致性
+- 当内核需要重用缓冲区时，会将所有**延迟写数据块**写入磁盘。
+- **`sync`**、**`fsync`**、**`fdatasync`** 用于保证磁盘上文件系统与缓冲区内容的一致性。
+
+```c
+#include <unistd.h>
+
+int fsync(int fd);
+
+int fdatasync(int fd);
+
+// 返回值：若成功，返回0；若出错，返回-1
+
+void sync(void);
+```
+
+`sync`只是将所有修改过的块缓冲区排入写队列，然后就返回，它并不等待实际写磁盘操作结束。
+
+通常，称为update的系统守护进程周期性地调用（一般每隔30秒）sync函数。这就保证了定期冲洗（flush）内核的块缓冲区。命令sync(1)也调用sync函数。
+
+fsync函数只对由文件描述符fd指定的一个文件起作用，并且等待写磁盘操作结束才返回, fsync可用于数据库这样的应用程序，这种应用程序需要确保修改过的块立即写到磁盘上。
+
+fdatasync函数类似于fsync，但它只影响文件的数据部分。而除数据外，fsync还会同步更新文件的属性。
+
+# file and dir
