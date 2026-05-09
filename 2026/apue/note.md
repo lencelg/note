@@ -2,7 +2,7 @@
 author: lencelg from Arcadia Bay
 title: Advanced Programming in the UNIX Environment note
 ---
-
+[reference note from shichao-an](https://notes.shichao.io/apue/)
 [TOC]
 
 # Introduction
@@ -438,3 +438,174 @@ fsync函数只对由文件描述符fd指定的一个文件起作用，并且等�
 fdatasync函数类似于fsync，但它只影响文件的数据部分。而除数据外，fsync还会同步更新文件的属性。
 
 # file and dir
+[`restrict`](https://en.wikipedia.org/wiki/Restrict) keyword is used to tell the compiler which pointer references can be optimized, by indicating that the object to which the pointer refers is accessed in the function only via that pointer.
+
+
+`stat`, `fstat`, `fstatat`, and `lstat` Functions
+
+<small>[apue_stat.h](https://gist.github.com/shichao-an/dd0cdd90a54848ff3018)</small>
+
+```c
+#include <sys/stat.h>
+
+int stat(const char *restrict pathname, struct stat *restrict buf);
+int fstat(int fd, struct stat *buf);
+int lstat(const char *restrict pathname, struct stat *restrict buf);
+int fstatat(int fd, const char *restrict pathname, struct stat *restrict buf, int flag);
+
+/* All four return: 0 if OK, −1 on error */
+```
+* `stat`: returns a structure of information about the named file
+* `fstat`: returns a structure of information about the given file descriptor
+* `lstat`: similar to `stat`, returns information about the symbolic link, not the file referenced by the symbolic link
+* `fstatat`:  return the file statistics for a pathname relative to an open directory represented by the fd argument; the flag argument controls whether symbolic links are followed
+
+元数据结构 stat 的大致结构如下：
+
+```c
+struct stat {
+    mode_t st_mode;             /* file type & mode (permissions) */
+    ino_t st_ino;               /* i-node number (serial number) */
+    dev_t st_dev;               /* device number (file system) */
+    dev_t st_rdev;              /* device number for special files */
+    nlink_t st_nlink;           /* number of links */
+    uid_t st_uid;               /* user ID of owner */
+    gid_t st_gid;               /* group ID of owner */
+    off_t st_size;              /* size in bytes, for regular files */
+    struct timespec st_atime;   /* time of last access */
+    struct timespec st_mtime;   /* time of last modification */
+    struct timespec st_ctime;   /* time of last file status change */
+    blksize_t st_blksize;       /* best I/O block size */
+    blkcnt_t st_blocks;         /* number of disk blocks allocated */
+};
+```
+## file types
+UNIX/Linux 系统中的文件类型共有以下 7 种：
+
+1. **普通文件**：包含文本或二进制数据，内核不解释内容（二进制可执行文件除外）。
+2. **目录文件**：包含文件名及指向相关信息的指针，只有内核可直接写。
+3. **块特殊文件**：提供对设备的带缓冲、固定长度访问（FreeBSD 已不再支持）。
+4. **字符特殊文件**：提供对设备的不带缓冲、可变长度访问。
+5. **FIFO（命名管道）**：用于进程间通信。
+6. **套接字**：用于网络或本地进程间通信。
+7. **符号链接**：指向另一个文件。
+
+the following program prints the type of file for each command-line argument.
+```c
+#include "apue.h"
+
+int
+main(int argc, char *argv[])
+{
+	int			i;
+	struct stat	buf;
+	char		*ptr;
+
+	for (i = 1; i < argc; i++) {
+		printf("%s: ", argv[i]);
+		if (lstat(argv[i], &buf) < 0) {
+			err_ret("lstat error");
+			continue;
+		}
+		if (S_ISREG(buf.st_mode))
+			ptr = "regular";
+		else if (S_ISDIR(buf.st_mode))
+			ptr = "directory";
+		else if (S_ISCHR(buf.st_mode))
+			ptr = "character special";
+		else if (S_ISBLK(buf.st_mode))
+			ptr = "block special";
+		else if (S_ISFIFO(buf.st_mode))
+			ptr = "fifo";
+		else if (S_ISLNK(buf.st_mode))
+			ptr = "symbolic link";
+		else if (S_ISSOCK(buf.st_mode))
+			ptr = "socket";
+		else
+			ptr = "** unknown mode **";
+		printf("%s\n", ptr);
+	}
+	exit(0);
+}
+```
+
+## `chmod`, `fchmod`, and `fchmodat` Functions
+```c
+#include <sys/stat.h>
+
+int chmod(const char *pathname, mode_t mode);
+int fchmod(int fd, mode_t mode);
+int fchmodat(int fd, const char *pathname, mode_t mode, int flag);
+
+/* All three return: 0 if OK, −1 on error */
+```
+
+## file system
+我们可以把一个磁盘分成一个或多个分区。每个分区包含一个文件系统节点是固定长度的记录项，它包含有关文件的大部分信息。
+
+文件系统的结构大致如下
+
+![](./img/file%20system.png)
+
+# Standard I/O Library
+标准I/O库的操作围绕 **流(stream)** 展开。
+
+Standard I/O file streams can be used with both single-byte and multibyte ("wide") character sets. 
+
+A stream’s orientation determines whether the characters that are read and written are single byte or multibyte.
+
+## Standard Input, Standard Output, and Standard Error
+标准输入、标准输出和标准错误。这些流引用的文件与 STDIN_FILENO、STDOUT_FILENO 和 STDERR_FILENO 所引用的相同。
+
+3 个标准 I/O 流通过预定义文件指针 `stdin`、`stdout` 和 `stderr` 加以引用, 定义在头文件`<stdio.h>`中。
+
+## Buffer
+标准 I/O 库提供缓冲的目的是尽可能减少使用 read 和 write 调用的次数.
+
+标准 I/O 库提供了以下 3 种缓冲类型：
+
+1. **全缓冲**  
+   - 填满缓冲区后才进行实际 I/O 操作, 对于磁盘上的文件通常采用全缓冲。  
+   - 第一次 I/O 时通过 `malloc` 分配缓冲区。  
+   - “冲洗”指将缓冲区内容写到磁盘（可能部分填满）。  
+2. **行缓冲**  
+   - 遇到换行符时才执行 I/O 操作, 通常用于终端（如标准输入/输出）。  
+   - 两个限制：  
+     - 缓冲区固定长度，填满时即使无换行符也会执行 I/O。  
+     - 当从不带缓冲的流或需要从内核读取数据的行缓冲流输入时，会冲洗所有行缓冲输出流。
+3. **不带缓冲**  
+   - 不进行字符缓冲，字符立即输出（例如通过 `write` 系统调用）.
+   - 例如 `fputs` 写 15 个字符会直接输出到文件。
+
+## stream
+```c
+#include <stdio.h>
+
+FILE *fopen(const char *restrict pathname, const char *restrict type);
+FILE *freopen(const char *restrict pathname,
+              const char *restrict type,
+              FILE *restrict fp);
+FILE *fdopen(int fd, const char *type);
+
+/* All three return: file pointer if OK, NULL on error */
+```
+
+`fclose` close the stream
+```c
+#include <stdio.h>
+
+int fclose(FILE *fp);
+
+/* Returns: 0 if OK, EOF on error */
+```
+
+## Read and Write Stream
+```c
+#include <stdio.h>
+
+int getc(FILE *fp);
+int fgetc(FILE *fp);
+int getchar(void);
+
+/* All three return: next character if OK, EOF on end of file or error */
+```

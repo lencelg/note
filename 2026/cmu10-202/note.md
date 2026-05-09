@@ -240,3 +240,41 @@ Other methods
 附教授的板书加以理解
 
 ![](./img/masked%20self%20attention.png)
+
+# Lec 13: Efficient LLM Inference
+outline 
+- Generations text from LLMs  
+- Temperature Sampling  
+- KV caching  
+
+## Generations text from an LLM
+
+\[Y = LLM(x_{oh})\]
+
+\[x_{oh} =
+\begin{bmatrix}
+0 \cdot 1 & \cdots & 0 \\
+0 \cdot 1 & \cdots & 0 \\
+0 \cdot 1 & \ddots & 0
+\end{bmatrix}\]
+
+\[\text{the "quirk" brown"}\]
+
+\[Y =
+\begin{bmatrix}
+0.1 & -5 & \cdots & 1.2 \\
+\vdots & \vdots & \ddots & \vdots \\
+\vdots & \vdots & \vdots & \vdots \\
+c_T
+\end{bmatrix}\]
+
+- **Sampling** from an LLM
+
+  1. Take last output \( Y_T \) ∈ ℝ\(^k\)  
+     convert to probability
+
+     \[P = {\text{softmax}(Y_T)},\quad {\text{softmax}(y)} = \frac{\text{exp}(y)}{\sum_{j=1}^k \text{exp}(y_j)}\]
+
+     - \( \exp(y) \) is the exponential function  
+     - \( \sum_{j=1}^k \exp(y_j) \) is the sum of exponentials
+  2. Sample next word from p, append to our input sentence
