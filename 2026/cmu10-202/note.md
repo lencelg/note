@@ -278,3 +278,240 @@ c_T
      - \( \exp(y) \) is the exponential function  
      - \( \sum_{j=1}^k \exp(y_j) \) is the sum of exponentials
   2. Sample next word from p, append to our input sentence
+
+在torch中可以使用`mulitnomial`来辅助sample
+
+```python
+import torch
+
+# Y = LLM(X)
+batch_size = 1
+seq_len = 100
+k = 5
+Y = torch.randn(batch_size, seq_len, k)
+
+p = torch.softmax(Y[0,-1], dim=-1)
+# 抽样100次
+torch.multinomail(p, 100, dim=-1, replacement=True)
+print(p)
+```
+
+## Temperature sampling
+上面的sample(Navie Sampling)过于随机，我们想倾向于对真正有用的信息进行sample
+
+basic idea:
+
+- Temperature sampling  
+\[ p = \text{softmax} \left( \frac{Y}{\tau} \right) \quad \tau \in \mathbb{R}^+ \]
+
+- As \( \tau \to 0^+ \), \( p \) puts all probability on the most likely next word.
+
+- As \( \tau \to \infty \), \( p \) becomes a uniform distribution.
+
+## KV caching
+记得sample之后是将结果加入input sentence, 这样就会有很多重复的计算，于是考虑使用kv cache来提高效率
+
+下面先将motivation
+
+我们只想计算$Y_{T+1}$, 记得矩阵右乘的性质和self-attention的计算过程
+
+1. **Right multipliers** + non-linear operations  
+   → apply independently to the rows of our internal representations  
+
+\[\sigma \left( --- x_{T+1}^T --- \right) w_2\]
+
+2. **Self Attention**  
+   SelfAttention(Q, K, V) = softmax \(\left( \frac{QK^T}{\sqrt{\alpha}} \right)V\)
+
+\[Y = \text{softmax} \left( \frac{QK^T}{\sqrt{\alpha}} \right) V\]
+
+\[ \begin{bmatrix} Y \\ 
+Y_{T+1} \end{bmatrix} =
+\operatorname{softmax}
+\left(
+\frac{
+\begin{bmatrix}
+Q \\
+q_{T+1}^{\top}
+\end{bmatrix}
+\begin{bmatrix}
+K \\
+k_{T+1}^{\top}
+\end{bmatrix}^{\top}
+}{\sqrt{\alpha}}
+\right)
+\begin{bmatrix}
+V \\
+v_{T+1}^{\top}
+\end{bmatrix}
+\]
+
+\[ Y_{T+1}^{\top} =
+\operatorname{softmax}
+\left(
+\frac{
+q_{T+1}^{\top}
+\begin{bmatrix}
+K \\
+k_{T+1}^{\top}
+\end{bmatrix}^{\top}
+}{\sqrt{\alpha}}
+\right)
+\begin{bmatrix}
+V \\
+v_{T+1}^{\top}
+\end{bmatrix}
+\]
+
+于是这里的$K_{T+1}$和$V_{T+1}$都可以通过右乘得到，$K$ and $V$ can use cache now.
+
+kv caching 的步骤如下：
+
+- Given \(x_{T+1}\) as input to self-attention
+
+- Store \(K^{\text{cache}}, V^{\text{cache}}\)
+
+- Form
+\[ q_{T+1} = W_Q x_{T+1},
+\quad
+k_{T+1} = W_K x_{T+1},
+\quad
+v_{T+1} = W_V x_{T+1}
+\]
+
+- Append \(k_{T+1}\) and \(v_{T+1}\) to cache
+
+\[ K^{\text{cache}} := \begin{bmatrix} K^{\text{cache}} \\ k_{T+1}^{\top} \end{bmatrix} \qquad V^{\text{cache}} := \begin{bmatrix}
+V^{\text{cache}} \\
+v_{T+1}^{\top}
+\end{bmatrix}
+\]
+
+- Form output
+
+\[ y_{T+1} =
+\mathrm{SelfAttn}
+\left(
+q_{T+1}^{\top},
+K^{\text{cache}},
+V^{\text{cache}}
+\right)
+\]
+
+\[ = \operatorname{softmax} \left(
+\frac{
+q_{T+1}^{\top}
+(K^{\text{cache}})^{\top}
+}{
+\sqrt{d}
+}
+\right)
+V^{\text{cache}}
+\]
+
+# Lec 14: Tokenization
+outline
+- From "words" to tokens  
+- Byte Pair Encoding (BPE) Tokenization  
+  - Training  
+  - Encoding  
+  - Decoding
+
+basic concept
+- token ≡ "collection of characters"
+- tokens include whitespace
+- text → tokens is not unique* in general  (the same text can be represented by different token sequences)
+- tokens → text is unique
+
+在[openai tokenizer](https://platform.openai.com/tokenizer)上可以进行tokenization的体验
+
+## BPE
+**Byte Pair Encoding (BPE) Tokenization** 有三个过程
+- **"Training"** – using a large collection of text, construct our set of tokens (and an ordering of tokens that lets us uniquely tokenize text)
+- **Encoding** – convert text to a sequence of token ids
+- **Decoding** – convert a sequence of token ids to text
+
+traning steps are as follow:
+1. Split text on whitespace (leaving whitespace in words).  
+   split words into characters (called corpus)
+2. Define tokens as set of all single characters.
+3. Repeat until we reach a target # of tokens.
+   - Find the most common pair of tokens.
+   - Merge these into new token (save the merge rule).
+4. Return list of tokens and merge rules.
+
+**Keep only unique words (and counts) in corpus.**
+
+encoding的过程结合教授板书的例子来理解更好
+
+![](./img/BPE%20encoding.png)
+
+BPE Decodings 容易理解: Replace each token id with its text
+
+# Lec 15: Training an LLM + Adam
+outline
+- Training an LLM  
+- Adam optimizer
+
+## Training an LLM
+简化的流程大概如下
+
+1. Collect data, i.e text data (from internet, or from existing dataset)
+
+2. Tokenize the data (store this)
+
+3. Split data into chunks of size seq_len+1 (also will minibatches)
+
+4. Repeat for \( i = 1, \dots, \# \) chunks
+   - \( X_{tok} = token[i][:seq\_len] \)
+   - \( Y = token[i][1:] \)
+   - \( \hat{Y} = LLM(X_{tok}) \)
+   - Loss = \(\sum_{t=1}^{length} \mathcal{L}(\hat{Y}_t, Y_T)\)
+   - Update parameters (i.e. weights) with a gradient update
+
+## Adam optimizer
+- Stochastic Gradient Descent (SGD) update  
+  \[ W := W - \eta \nabla_w Loss(\hat{y}(w), y) \]
+
+- Problems with SGD  
+  - **bound around**：损失曲面在某些方向上陡峭，在另一些方向上平坦。SGD 会在陡峭方向上来回摆动，收敛慢。  
+    ➡ **动量（Momentum）** ：累积历史梯度方向，平滑更新，减少震荡。
+
+  - **梯度尺度不一**：不同权重参数的梯度数量级可能差异很大（某些层梯度很小，某些层很大）。统一的学习率不适合所有参数。
+    ➡ **自适应学习率(adaptive update)**：为每个参数单独调整步长（e.g. AdaGrad、RMSProp）。
+
+- Adam  
+  - Like SGD with momentum, except that we also compute average magnitude of each element's gradient, scale updates by this magnitude.  
+
+1. Initialize \( u, v := 0 \), \( W \)  
+2. Repeat for \( t = 1, \dots \)  
+   \[   u := \beta_1 u + (1 - \beta_1) \nabla_{\text{loss}}\]  
+
+   \[   v := \beta_2 v + (1 - \beta_2) \nabla_{\text{loss}}^2 \\
+   \text{(elementary square)} \]    
+
+   \[   \hat{u} := u / (1 - \beta_1^t)\]  
+
+   \[   \hat{v} := v / (1 - \beta_2^t)\]  
+
+   \[   w := w - n \frac{\hat{u}}{\sqrt{\hat{v} + \epsilon}} \\
+   \text{(elementwise division and square root)}\]    
+
+- 需要记录\( u, v \), 3倍的参数量
+- 偏差修正（除以 \(1-\beta^t\)）解决初始时刻估计偏小的问题。
+- 一阶动量（动量项）：梯度的指数加权平均，模拟速度。
+- 二阶动量（自适应项）：梯度平方的指数加权平均，模拟每个参数的历史尺度，从而动态调整学习率。
+
+# Lec 16: Introduction to post-training
+outline
+- An example: chat and instruction following
+- The goals of post-training
+- Methods for post-training
+- Foundation Models and evolving ML paradigm
+
+在例子里面教授的意思大概就是如何让训练好的模型来做其他的任务，通过post-traning来进行transfer learning
+
+- pretrain = normal autoregressive training of an LLM  
+- post-training = training done after pretraining to make the LLM solve some task or follow some prescribed behavior  
+- Common paradigm: pretrain an LLM on lots of data, post-train on **relatively little data**
+- With relatively little post-training, LLMs can often exhibit the desired behavior
