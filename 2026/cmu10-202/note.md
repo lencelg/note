@@ -515,3 +515,58 @@ outline
 - post-training = training done after pretraining to make the LLM solve some task or follow some prescribed behavior  
 - Common paradigm: pretrain an LLM on lots of data, post-train on **relatively little data**
 - With relatively little post-training, LLMs can often exhibit the desired behavior
+
+## post-traning goals
+post-traning 的三个任务如下(llm generated)：
+- **监督微调**  
+  - 主要目标：建立对话格式，学会理解并执行指令  
+  - 主流技术方法：指令微调、参数高效微调（如 LoRA）  
+  - 所需数据：数万至数百万条人工标注或合成的“指令-回复”对  
+
+- **偏好对齐**  
+  - 主要目标：让模型理解人类的价值观与偏好，从“能用”变为“好用”  
+  - 主流技术方法：RLHF、DPO、KTO  
+  - 所需数据：“好/坏”或“偏好”的对比数据对（如人类对两个回复打分）  
+
+- **强化学习**  
+  - 主要目标：通过自我探索与反馈，解锁并提升复杂的推理能力  
+  - 主流技术方法：GRPO、DAPO、RLVR  
+  - 所需数据：可验证的任务（如数学题答案、代码执行结果、规则逻辑）  
+
+教授还有一个补充的goal
+- Tool use (web search, terminals, compilers, general computer use)
+
+## method for post-traning
+首先是few-shot prompts
+
+在输入 prompt 中直接给模型展示几个任务示例，让它“照葫芦画瓢”
+- Prompts / few-shot prompts
+  - Build a prompt that produces the desired behaviour of them, by providing some examples  
+    x = "What is the capital of England? London 
+    what is in the capital of France? Paris 
+    what is the capital of the US?"
+    y = "Washington, DC"
+
+不需要重新训练或微调，节省计算资源；缺点是依赖模型已有的推理能力，且对长上下文和复杂任务可能不够稳定。
+
+---
+
+Supervised  Finetunning(SFT)
+- Keep training  model (auto regressively) on data that demonstrates on desired behavior
+
+---
+利用强化学习
+
+- Reinforcement learning  
+  - Instead of providing a target response to given prompt, we have a **reward function** that characterizes how good a response is.  
+  - Generate a lot of possible responses to prompt, use the reward function to score them, train (autoregressively) on the "good" responses.
+
+---
+
+- Hybrids
+  - Direct Preference Optimization(DPO): train model on pairs of good/bad responses
+  - Distillation(知识蒸馏): training to match the distribution of tokens from another model
+
+最后就是ml的趋势介绍
+
+![](./img/evolution%20of%20ml%20paradigm.png)
