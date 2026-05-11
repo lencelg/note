@@ -609,3 +609,87 @@ int getchar(void);
 
 /* All three return: next character if OK, EOF on end of file or error */
 ```
+## 每次一行 I/O
+```c
+#include <stdio.h>
+char *fgets(char *restrict buf, int n, FILE *restrict fp);
+char *gets(char *buf);
+
+// 返回值：成功返回 buf，出错或到达文件末尾返回 NULL
+```
+
+相应的output函数如下：
+```c
+#include <stdio.h>
+int fputs(const char *restrict str, FILE *restrict fp);
+int puts(const char *str);
+
+// 两个函数返回值：若成功，返回非负值；若出错，返回 EOF
+```
+
+`exit` 函数会冲洗任何未冲洗的数据，然后关闭所有的流。
+
+## 定位流
+```c
+#include <stdio.h>
+long ftell(FILE *fp); //返回值：若成功，返回当前文件位置指示；若出错，返回-1L
+int fseek(FILE *fp, long offset, int whence); //返回值：若成功，返回0；若出错，返回-1
+void rewind(FILE *fp);
+```
+
+# Process environment
+## Exit function
+`exit` 执行一些清理后返回内核，`_Exit` 和 `_exit`则直接进入内核。
+```c
+#include <stdlib.h>
+void exit(int status);
+void _Exit(int status);
+
+#include <unistd.h>
+void _exit(int status);
+```
+
+## `atexit`
+这里的概念有点类似类的析构函数  
+
+一个进程可以登记多至32个函数，这些函数由 `exit` 自动调用，早称为 **终止处理程序 (exit handler)**
+
+使用`atexit`登记这些函数
+
+```c
+#include <stdlib.h>
+int atexit(void (*func)(void)); //  返回值：若成功，返回0；若出错，返回非0
+```
+
+退出时，退出的过程大致如下：`exit` 首先调用各终止程序，然后关闭所有流。  
+
+![](./img/exit.png)
+
+## environ
+每个程序都接收到一张 **环境表** 。环境表是一个字符串指针数组  
+```c
+extern char **environ;
+int main(int argc, char *argv[], char *envp[]);
+```
+
+![](./img/environ.png)
+
+## program memory layout
+![](./img/memory%20layout.png)
+
+对于32位Intel x86处理器上的linux, 正文段从`0x0804800`单元开始，栈底在`0xc0000000`之下开始
+## allocate space
+- **malloc**：分配指定字节数的存储区，初始值不确定。  
+- **calloc**：为指定数量、指定长度的对象分配存储空间，每一位初始化为 0。  
+- **realloc**：增加或减少以前分配区的长度；增加时可能移动内容，新增区域的初始值不确定。
+```c
+#include <stdlib.h>
+
+void *malloc(size_t size);
+void *calloc(size_t nobj, size_t size);
+void *realloc(void *ptr, size_t newsize);
+
+void free(void *ptr);
+
+// 3 个函数返回值：若成功，返回非空指针；若出错，返回 NULL
+```
