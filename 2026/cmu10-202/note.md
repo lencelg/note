@@ -570,3 +570,150 @@ Supervised  Finetunning(SFT)
 最后就是ml的趋势介绍
 
 ![](./img/evolution%20of%20ml%20paradigm.png)
+
+# Lec 17: Chat and instruction tuning
+outline
+- Chat formatting
+- Notation
+- Supervised fine-tuning (SFT)
+- Direct Preference Optimization (DPO)
+
+使用tag来进行format.
+```
+现在有两个句子
+<user> How are you? </user >
+<assistant> Fine, thanks for asking </assistant >
+
+于是X = <user> How are you? </user > <assistant>
+y = Fine, thanks for asking </assistant >
+
+第二次对话
+<user> How's the weather  </user>
+<assistant> I don't have access to weather info  </assistant>
+  
+X = 一开始的两个句子加上 <user> How's the weather  </user> <assistant>
+y就是剩下的
+```
+
+## Supervised Finetuning (SFT)
+
+SFT和监督学习的思想是一样的
+
+- Given dataset of \((x_i, y_i)\) \(i = 1, \dots, N\) pairs
+
+- Minimize  
+  \[  \mathcal{L}_{SFT} = \sum_{i=1}^N - \log p(y_i | x_i)\]
+
+  using e.g. stochastic gradient descent (or Adam,...)
+
+- The same as minimizing cross entropy loss only on the \(y\) portion of each pair
+
+- Common to include only one conversation per element of the batch
+
+缺点： 很难找到好的数据集。
+
+## Direct Preference Optimization (DPO)
+Direct Preference Optimization (DPO)
+
+- Given a data set of triples \((x_i, y_i^+, y_i^-)\), \(i=1,...,N\)
+  indicator that for input \(x_i\), we prefer
+  output \(y_i^+\) to \(y_i^-\)
+- define loss as follow
+    2.
+
+\[\mathcal{L}_{DPO} = \frac{1}{N} \sum_{i=1}^N \text{softplus} \left( -\log p(y_i^+ |x_i) + \log p(y_i^- |x_i) \right) + \log \text{pref}(y_i^+ |x_i) - \log \text{pref}(y_i^- |x_i)\]
+
+where
+
+\[\text{softplus}(x) = \log(1+e^x)\]
+
+\[\text{pref}(y |x) \quad \text{来自于pref模型(一个训练的好的模型)}\] 
+
+# Lec 18 - Reinforcement Learning
+outline
+- Back ground on RL
+- RL for LLMs
+- REINFORCE
+- Additions
+
+## RL for LLMs 
+- Goal: adjust LLM to maximize expected reward  
+  maximize \[ E_{y \sim p(y|x)} [R(x, y)] \]  
+
+- Preview of the results method  
+
+1. Generate a bunch of samples  
+   \[ Y_1, \dots, Y_N \sim p(y|x) \]  
+
+2. Calculate the reward of each sample  
+   \[ r_i = R(x, y_i) \]  
+
+3. Train on the generated samples  
+   (i.e. with SFT) weighted by reward  
+     
+   \[\text{maximize} \quad \frac{1}{N} \sum_{i=1}^N \log p(y_i | x) \cdot r_i \]  
+
+\[ W := W + \eta \frac{1}{N} \sum_{i=1}^N r_i \nabla_w \log p(y_i | x) \]
+
+## REINFORCE
+- Preview: how can we approximate expectation?
+
+\[ E_{y \sim p(y|x)} [R(x, y)]? \]
+
+Monte Carlo Sampling(helpful for this):
+
+1. Draw samples \( y_1, \dots, y_N \sim p(y|x) \)
+2. **Approximate expectation** as average over the samples
+
+\[ E_{y \sim p(y|x)} [R(x, y)] = \frac{1}{N} \sum_{i=1}^N R(x, y_i) \]
+
+问题在于如何计算梯度，一种方法是利用Monte Carlo Sampling近似计算
+
+推导过程如下：
+
+$$
+\begin{align}
+&\nabla_w E_{y \sim p(y|x)} [R(x, y)] \\
+&=\nabla_w \sum_y p(y|x) R(x, y) \\
+&= \nabla_w \sum_y p(y|x) R(x, y)\\
+&= \sum_y \frac{p(y|x)}{p(y|x)} \nabla_w p(y|x) R(x, y)\\
+\end{align}
+$$
+
+$$
+\text{notice that} \quad \frac{\nabla_w p(y|x)}{p(y|x)} = \nabla_w \log p(y|x)
+$$
+
+$$
+\begin{align}
+\text{上式} &= \sum_y p(y|x) \nabla_w \log p(y|x) R(x, y)\\
+&= E_{y \sim p(y|x)} [\nabla_w \log p(y|x) R(x, y)
+\end{align}
+$$
+
+- approximate this term with Monte Carlo sampling  
+  1. Sample: $ y_1, \dots, y_n \sim p(y|x) $
+  2. Approximate:  
+    $$  \nabla_w E_{y \sim p(y|x)} [R(x, y)] = \frac{1}{n} \sum_{i = 1}^N (\nabla_w \log p(y_i|x)) R(x, y_i)$$
+
+下面附教授的板书加以理解
+
+![](./img/reinforcement%20learning.png)
+
+# Additions
+
+- Baseline or advantage function  
+  $$ \frac{\partial}{\partial x} (f(x) + c) = \frac{\partial}{\partial x} f(x) $$
+
+- Adding constant to reward doesn’t change its gradient  
+  $$ \nabla_w E_{y \sim p(y|x)} [R(x, y) + c] = \nabla_w E_{y \sim p(y|x)} [R(x, y)] $$
+
+- Subtract the average reward from reward of each sample  
+  $$ \nabla_w E_{y \sim p(y|x)} [R(x, y)] \approx \frac{1}{N} \sum_{i=1}^N \nabla_w \log p(y_i | x) (R(x_i, y_i) - \bar{R}) $$
+
+where  
+$$ \bar{R} = \frac{1}{N} \sum_{i=1}^N R(x_i, y_i) $$
+
+- Importance weighting: weights the samples to allow for sampling from distributions other than $ p(y|x) $
+
+- Regularization: penalize large deviations from the distribution of the current model
