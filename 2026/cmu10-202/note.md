@@ -717,3 +717,29 @@ $$ \bar{R} = \frac{1}{N} \sum_{i=1}^N R(x_i, y_i) $$
 - Importance weighting: weights the samples to allow for sampling from distributions other than $ p(y|x) $
 
 - Regularization: penalize large deviations from the distribution of the current model
+
+# Lec 19: RLHF and reasoning models
+outline
+- Reinforcement learning from human feedback(RLHF)
+- Chain of thought
+- Reasoning models (RL from verified rewards)
+- Tool use
+
+## RLHF
+- RLHF  
+  - Optimize model for response that people prefer  
+  - Define a reward functions that corresponds to how much a response is preferred
+
+RLHF的过程和DPO很像
+
+- Step 1: Train our reward function  
+  - Given: input (prompt) \( x \), preferred response \( y^+ \), non-preferred response \( y^- \)  
+  - Train a reward model  
+    \[  R : x \times y \rightarrow \mathbb{R}\]  
+  - use a loss function that encourages  
+  \[R(x, y^+) > R(x, y^-)\]  
+- Step 2: Optimize our LLM to maximize the reward using RL
+
+notice that
+- As you optimize the LLM, the reward becomes **a worse approximation** of "true" preferences.  
+  need to periodically retrain the reward model
