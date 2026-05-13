@@ -4,10 +4,6 @@ title: note of python data science book set
 ---
 this note is made from data science book set
 
-PS: 这是一套书籍，很多内容, 每周抽点时间看一看
-
->立个flag: 完成这个note
-
 [TOC]
 
 # 第一本书数据科学入门第二版
@@ -302,3 +298,6 @@ def perceptron_output(weights: Vector, bias: float, x: Vector) -> float:
 建模语言的另一种方法是使用 **语法(grammer)**
 
 但是现实应用中使用 **词向量**
+
+# Last Note
+this note is not finished, onlh the first book is read, the other books is mostly talking the same content
