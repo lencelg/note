@@ -12,3 +12,4 @@ Useless record
 * ucb168
 * rcore(not finished and not in consideration)
 * coursera-deep-learning
+* cmu10-202
