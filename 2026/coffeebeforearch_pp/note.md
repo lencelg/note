@@ -161,3 +161,150 @@ main(){
 ```
 
 more convenient with the same result
+
+## OpenMp
+let the compiler do the work for us
+
+```cpp
+#include <iostream>
+#include <omp.h>
+
+int 
+main(){
+#pragma omp parallel
+    {
+        std::cout << "Printing from thread" << omp_get_thread_num() << '\n';
+    }
+
+    return 0;
+}
+```
+
+output as follow
+
+```console
+[i]○ → ./omp 
+Printing from threadPrinting from thread156
+Printing from thread1
+Printing from thread4
+Printing from thread2
+Printing from threadPrinting from thread13
+Printing from thread14
+
+Printing from thread7
+Printing from thread9
+Printing from thread5
+8
+Printing from thread11
+Printing from thread3
+Printing from thread12
+Printing from thread0
+Printing from thread10
+```
+
+use ``critical`` to make one thread at a time
+
+```cpp
+#include <iostream>
+#include <omp.h>
+
+int 
+main(){
+#pragma omp parallel
+    {
+#pragma omp critical
+        {
+        std::cout << "Printing from thread: " << omp_get_thread_num() << '\n';
+
+        }
+    }
+
+    return 0;
+}
+```
+
+output as follow
+
+```console
+[i]○ → ./omp 
+Printing from thread: 13
+Printing from thread: 1
+Printing from thread: 4
+Printing from thread: 11
+Printing from thread: 15
+Printing from thread: 5
+Printing from thread: 8
+Printing from thread: 3
+Printing from thread: 6
+Printing from thread: 10
+Printing from thread: 12
+Printing from thread: 2
+Printing from thread: 14
+Printing from thread: 9
+Printing from thread: 7
+Printing from thread: 0
+```
+
+## pthread
+rawer, more powerful
+
+```cpp
+// This program shows the basics of using Pthreads in C++
+// By: Nick from CoffeeBeforeArch
+
+#include <pthread.h>
+#include <array>
+#include <cassert>
+#include <iostream>
+
+// Our mutex for each thread
+// We can statically or dynamically initialize it
+// Use pthread_mutex_init(...) for dynamic initialization
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+// Our function that serves as the entry point for the threads
+// Return values and parameters are passed through void pointers
+void *print_func(void *args) {
+  // Cast our argument back to it's original type
+  int *ID = static_cast<int *>(args);
+
+  // Lock the mutex before printing
+  pthread_mutex_lock(&lock);
+  std::cout << "Printing from thread: " << *ID << '\n';
+  pthread_mutex_unlock(&lock);
+
+  // We can call pthread_exit to kill the thread
+  // Pass NULL if we don't care about the status code
+  pthread_exit(NULL);
+}
+
+int main() {
+  // Create an array of four thread IDs and four threads
+  std::array<int, 4> ids = {0, 1, 2, 3};
+  std::array<pthread_t, 4> threads;
+
+  // Create four threads with the print function as an entrypoint
+  // Arguments:
+  //  1.) Address of thread object
+  //  2.) Thread attributes (NULL means default)
+  //  3.) Entrypoint (function pointer)
+  //  4.) Void pointer to arguments
+  for (auto &id : ids) {
+    pthread_create(&threads[id], NULL, print_func, static_cast<void *>(&id));
+  }
+
+  // Called from the main thread, this will block until the other 4 threads
+  // complete
+  pthread_exit(NULL);
+}
+```
+
+output as follow
+
+```console
+[i]○ → ./pthread 
+Printing from thread: 0
+Printing from thread: 3
+Printing from thread: 2
+Printing from thread: 1
+```
