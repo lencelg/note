@@ -3,6 +3,9 @@ author: lencelg from Arcadia Bay
 title: Advanced Programming in the UNIX Environment note
 ---
 [reference note from shichao-an](https://notes.shichao.io/apue/)
+
+note is not finished and not in consideration now
+
 [TOC]
 
 # Process control
@@ -152,3 +155,71 @@ pid_t waitpid(pid_t pid, int *statloc, int options);
 - `pid > 0` 等待进程 ID 与 pid 相等的子进程。
 - `pid = 0` 等待组 ID 等于调用进程组 ID 的任一子进程。（9.4 节将说明进程组。）
 - `pid < -1` 等待组 ID 等于 pid 绝对值的任一子进程。
+
+# Signal
+The simplest interface to the signal features of the UNIX System is the signal function
+```c
+#include <signal.h>
+
+void (*signal(int signo, void (*func)(int)))(int);
+
+/* Returns: previous disposition of signal (see following) if OK, SIG_ERR on error */
+```
+- `signal` 是一个函数，参数为 `(int signo, void (*func)(int))`。
+- 它的返回值类型是 `void (*)(int)` —— 一个**函数指针**，指向参数为 `int`、返回值为 `void` 的函数。
+- `int signo`：信号编号，如 `SIGINT`、`SIGTERM`。
+- `void (*func)(int)`：也是一个函数指针，指向用户定义的信号处理函数（或 `SIG_IGN`、`SIG_DFL`）。
+
+make it much simpler through the use of the following `typedef`:
+```c
+typedef void Sigfunc(int);
+
+Sigfunc *signal(int, Sigfunc *);
+```
+
+这个声明是 **`signal` 函数**的标准原型，用于设置某个信号的处理方式。它看起来复杂，我们可以逐步拆解。
+
+simple example 
+```c
+void my_handler(int sig) {
+    printf("Caught signal %d\n", sig);
+}
+
+// 安装处理程序，保存旧的
+void (*old)(int) = signal(SIGINT, my_handler);
+if (old == SIG_ERR) {
+    perror("signal");
+}
+
+// 恢复旧的处理程序
+signal(SIGINT, old);
+```
+
+book example: recognize SIGUSR1 or SIGUSR2
+```c
+#include "apue.h"
+
+static void sig_usr(int); /* one handler for both signals */
+
+int
+main(void)
+{
+    if (signal(SIGUSR1, sig_usr) == SIG_ERR)
+        err_sys("can't catch SIGUSR1");
+    if (signal(SIGUSR2, sig_usr) == SIG_ERR)
+        err_sys("can't catch SIGUSR2");
+    for (;;)
+        pause();
+}
+
+static void
+sig_usr(int signo)    /* argument is signal number */
+{
+    if (signo == SIGUSR1)
+        printf("received SIGUSR1\n");
+    else if (signo == SIGUSR2)
+        printf("received SIGUSR2\n");
+    else
+        err_dump("received signal %d\n", signo);
+}
+```
