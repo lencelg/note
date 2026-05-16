@@ -208,3 +208,154 @@ $$
 $$
 
 the last thing to mention about is $\frac{\partial Z_{i+1}}{\partial W_i}$, an operation called the “vector Jacobian product”
+
+# Lec 4: Automatic Differentiation
+outline
+- General introduction to different differentiation methods
+- Reverse mode automatic differentiation
+
+## Numerical differentiation
+Directly compute the partial gradient by definition  
+
+\[\frac{\partial f(\theta)}{\partial \theta_i} = \lim_{\epsilon \to 0} \frac{f(\theta + \epsilon e_i) - f(\theta)}{\epsilon}\]
+
+A more numerically accurate way to approximate the gradient, 这和泰勒展开和中分误差有关, 截断误差为二阶精度。
+
+\[\frac{\partial f(\theta)}{\partial \theta_i} = \frac{f(\theta + \epsilon e_i) - f(\theta - \epsilon e_i)}{2\epsilon} + o(\epsilon^2)\]
+
+Suffer from numerical error, less efficient to compute, two times of forward to compute
+
+### ps: 推导
+对于前向差分：
+
+\[ \frac{f(\theta + \epsilon e_i) - f(\theta)}{\epsilon} = f'(\theta) + \frac{1}{2} f''(\theta) \epsilon + O(\epsilon^2) \]
+
+截断误差为 \(O(\epsilon)\)（一阶精度）。
+
+中心差分的误差
+
+对 \(f(\theta + \epsilon e_i)\) 和 \(f(\theta - \epsilon e_i)\) 分别泰勒展开：
+
+\[ f(\theta + \epsilon) = f(\theta) + f'(\theta)\epsilon + \frac{1}{2}f''(\theta)\epsilon^2 + \frac{1}{6}f'''(\theta)\epsilon^3 + O(\epsilon^4) \]
+
+\[ f(\theta - \epsilon) = f(\theta) - f'(\theta)\epsilon + \frac{1}{2}f''(\theta)\epsilon^2 - \frac{1}{6}f'''(\theta)\epsilon^3 + O(\epsilon^4) \]
+
+两式相减：
+
+\[ f(\theta + \epsilon) - f(\theta - \epsilon) = 2 f'(\theta)\epsilon + \frac{1}{3}f'''(\theta)\epsilon^3 + O(\epsilon^5) \]
+
+因此：
+
+\[ \frac{f(\theta + \epsilon) - f(\theta - \epsilon)}{2\epsilon} = f'(\theta) + \frac{1}{6}f'''(\theta)\epsilon^2 + O(\epsilon^4) \]
+
+截断误差为 \(O(\epsilon^2)\)（二阶精度）。
+
+## Numerical gradient checking
+However, numerical differentiation is a powerful tool to **check an implement of an automatic differentiation algorithm in unit test cases**
+
+\[\delta^T \nabla_\theta f(\theta) = \frac{f(\theta + \epsilon\delta) - f(\theta - \epsilon\delta)}{2\epsilon} + o(\epsilon^2)\]
+
+Pick \(\delta\) from unit ball, check the above invariance.
+
+just check whether left is closer enough to the right
+
+## Forward mode automatic differentiation (AD)
+
+![](./img/forward%20AD.png)
+
+缺点在于有 $n$ 个参数的时候要进行 $n$ 次 forward AD。
+
+in deeplearning case, we mostly care about the situation where $k = 1$ and large $n$
+
+## Reverse mode automatic differentiation(AD)
+
+![](./img/reverse%20AD.png)
+
+but need to consider the multiple pathway case
+
+## Derivation for the multiple pathway case
+
+\( v_1 \) is being used in multiple pathways (\( v_2 \) and \( v_3 \))
+
+\[v_1 \rightarrow v_2, v_3 \rightarrow v_4 \rightarrow y\]
+
+\( y \) can be written in the form of \( y = f(v_2, v_3) \)
+
+\[\overline{v_1} = \frac{\partial y}{\partial v_1} = \frac{\partial f(v_2, v_3)}{\partial v_2} \frac{\partial v_2}{\partial v_1} + \frac{\partial f(v_2, v_3)}{\partial v_3} \frac{\partial v_3}{\partial v_1} = \overline{v_2} \frac{\partial v_2}{\partial v_1} + \overline{v_3} \frac{\partial v_3}{\partial v_1}\]
+
+Define partial adjoint
+
+\[\overline{v_{i \rightarrow j}} = \overline{v_j} \frac{\partial v_j}{\partial v_i}\]
+
+for each input output node pair \( i \) and \( j \)
+
+\[\overline{v_i} = \sum_{j \in \text{next}(i)} \overline{v_{i \rightarrow j}}\]
+
+compute partial adjoints separately then sum them together
+
+one implementation would look like this
+
+$$
+\begin{array}{l}
+\text{def } \text{gradient}(out): \\
+\quad \text{node\_to\_grad} \leftarrow \{ out: [1] \} \\
+\quad \text{for } i \text{ in } \text{reverse\_topo\_order}(out): \\
+\quad \quad \bar{v}_i = \sum_j \bar{v}_{i \to j} = \operatorname{sum}(\text{node\_to\_grad}[i]) \\
+\quad \quad \text{for } k \in \text{inputs}(i): \\
+\quad \quad \quad \text{compute } \bar{v}_{k \to i} = \bar{v}_i \cdot \frac{\partial v_i}{\partial v_k} \\
+\quad \quad \quad \text{append } \bar{v}_{k \to i} \text{ to } \text{node\_to\_grad}[k] \\
+\quad \text{return adjoint of input } \bar{v}_{\text{input}}
+\end{array}
+$$
+
+## extending the computational graph
+推导的过程跟 TQ 走一遍就明白了
+
+![](./img/extending%20computational%20graph.png)
+
+构造的计算图的计算过程是固定，所以对于不同的输入计算图还是一样，这样就不用重新构建了。由于引用了部分的值，所以空间的开销也变少了。
+
+反向传播
+- 先前向，后反向
+- 不显式创建反向图，只是按顺序计算导数并传播。
+
+反向模式 AD（显式构建反向图）
+- 可以计算导数的导数(get it for free)
+- 可以存储、优化或多次执行
+
+## Reverse mode AD on Tensors
+扩展定义来支持 Tensor
+
+**matrix**
+$$
+X, W \rightarrow Z \rightarrow v \rightarrow y
+$$
+
+**Forward evaluation trace**
+
+\[Z_{ij} = \sum_k X_{ik} W_{kj}\]
+
+\[v = f(Z)\]
+
+**Forward matrix form**
+
+\[Z = XW\]
+
+\[v = f(Z)\]
+
+**Define adjoint for tensor values**
+
+\[\bar{Z} = 
+\begin{bmatrix}
+\frac{\partial Y}{\partial Z_{1,1}} & \cdots & \frac{\partial Y}{\partial Z_{1,n}} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial Y}{\partial Z_{m,1}} & \cdots & \frac{\partial Y}{\partial Z_{m,n}}
+\end{bmatrix}\]
+
+**Reverse evaluation in scalar form**
+
+\[\bar{X}_{i,k} = \sum_j \frac{\partial Z_{i,j}}{\partial X_{i,k}} \bar{Z}_{i,j} = \sum_j W_{k,j} \bar{Z}_{i,j}\]
+
+**Reverse matrix form**
+
+\[\bar{X} = \bar{Z} W^T\]
