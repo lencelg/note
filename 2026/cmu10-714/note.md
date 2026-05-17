@@ -359,3 +359,19 @@ $$
 **Reverse matrix form**
 
 \[\bar{X} = \bar{Z} W^T\]
+
+# Lec 5: AD implementation
+`detach()` 函数可以断开计算图的节点从而节省内存
+```python
+x = ndl.Tensor([1], dtype="float32")
+sum_loss = ndl.Tensor([0], dtype="float32")
+
+for i in range(100):
+   sum_loss += x * x
+```
+
+上面的例子会构建一个计算图，在这种情况下带来不必要的开销, 使用 `detach()` 改写：
+
+```python
+sum_loss = (sum_loss + x * x).detach()
+```
