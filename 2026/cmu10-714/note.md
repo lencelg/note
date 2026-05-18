@@ -375,3 +375,125 @@ for i in range(100):
 ```python
 sum_loss = (sum_loss + x * x).detach()
 ```
+
+# Lec 6: Fully connected networks, optimization, initialization
+outline 
+- Fully connected networks
+- Optimization
+- Initialization
+
+A L-layer, fully connected network, a.k.a. multi-layer perceptron (MLP) with an explicit bias term
+
+\[z_{i+1} = \sigma_i(W_i^T z_i + b_i), \quad i = 1, \dots, L\]
+
+\[h_\theta(x) \equiv z_{L+1}\]
+
+\[z_1 \equiv x\]
+
+with parameters \(\theta = \{W_{1:L}, b_{1:L}\}\), and where \(\sigma_i(x)\) is the nonlinear activation, usually with \(\sigma_L(x) = x\)
+
+迭代的表达式写成矩阵形式为：
+
+$$
+Z_{i+1} = \sigma_i(Z_iW_i+1b_i^T)  
+$$
+
+其中，$1$表示一个表示一个全1的列向量，用于将列向量$b_i^T$广播到与矩阵$Z_iW_i$相匹配的形状。
+
+在实际实现过程中，我们不用浪费空间去构造这样一个全1列向量，而是直接使用广播算子。
+
+在NumPy有许多自动的广播操作，但是在我们实现的needle库中，这一操作更加显式，例如对于$(n\times 1) \to (m \times n)$，要执行的操作为`A.reshape((1, n)).broadcast_to((m, n))`。
+
+## Optimization
+
+### Newton's Method
+牛顿法使用二次曲面对一个高维函数做近似，因此其收敛速度显著快于一阶逼近的梯度下降法。其迭代公式为：
+
+$$
+\theta_{t+1} = \theta_t - \alpha(\nabla_\theta^2f(\theta_t))^{-1}\nabla_\theta f(\theta_t)
+$$
+
+其中，$(\nabla_\theta^2f(\theta_t))^{-1}$是*Hessian*矩阵的逆矩阵。*Hessian*矩阵每个元素都是二阶导数，其具体定义为：
+$$
+\nabla_\theta^2f(\theta_t) = H=\begin{bmatrix}\frac{\partial^2f}{\partial x_1^2}&\frac{\partial^2f}{\partial x_1\partial x_2}&\cdots&\frac{\partial^2f}{\partial x_1\partial x_n}\\\frac{\partial^2f}{\partial x_2\partial x_1}&\frac{\partial^2f}{\partial x_2^2}&\cdots&\frac{\partial^2f}{\partial x_2\partial x_n}\\\vdots&\vdots&\ddots&\vdots\\\frac{\partial^2f}{\partial x_n\partial x_1}&\frac{\partial^2f}{\partial x_n\partial x_2}&\cdots&\frac{\partial^2f}{\partial x_n^2}\end{bmatrix}
+$$
+
+对于二次函数，牛顿法可以一次给出指向最优点的方向
+
+reason not to use it
+1. Hessian矩阵是$n\times n$的，因此参数量稍微大一点其计算代码都非常非常恐怖
+2. 对于非凸优化，二阶方法是否更有效还有待商榷。
+
+### Momentum
+- SGD 每次做最快的下降方向，是贪心的，会出现来回跳动的问题。
+
+动量法正是对梯度取指数移动平均的方案: 对于以前的方向加以考虑，曲线变得更平滑
+
+$$
+\begin{align*}  
+&u_{t+1} = \beta u_t +(1-\beta)\nabla_\theta f(\theta_t)\\  
+&\theta_{t+1} = \theta_t - \alpha u_{t+1}  
+\end{align*}
+$$
+
+### Unbiasing Momentum
+如果$u_0$初始化为0，那么第一次进行更新是的梯度值是正常更新的$(1-\beta)$倍，因此其前期的收敛过程会稍慢，但随着迭代的进行，其效应会逐渐减弱.
+
+在参数更新过程中对动量进行缩放，具体来说：
+$$
+\theta_{t+1} = \theta_{t} - \frac{\alpha u_{t+1}}{1-\beta^{t+1}}
+$$
+
+修正以后其前期的更新速度要快了不少。
+
+### Nestov Momentum
+Nesterov是梯度下降中一个非常有效的“trick”，其在传统momentum的基础上，将计算当前位置的梯度改为计算下一步位置的梯度。
+
+$$
+\begin{align*}
+u_{t+1} &= \beta u_t +(1-\beta)\nabla_\theta f(\theta_t - \alpha u_t) \\
+\theta_{t+1} &= \theta_t - \alpha u_{t+1}  
+\end{align*}
+$$
+
+大致的思想如下: 利用过去两步的差异构造一个“预测”点，在这个点上计算梯度，从而更有效地压缩误差项中的高阶余量。
+
+### Adam 
+Adaptive Moment Estimation
+
+$$
+\begin{align*}  
+&u_{t+1} = \beta_1 u_t + (1-\beta_1)\nabla_\theta f(\theta_t)\\  
+&v_{t+1} = \beta_2 v_t + (1-\beta_2)(\nabla_\theta f(\theta_t))^2  &\text{平方为逐元素运算}\\  
+&\theta_{t+1} = \theta_t - \frac{\alpha u_{t+1}}{\sqrt{v_{t+1}}+\epsilon} & \text{所有元素均为逐元素运算}\\  
+\end{align*}
+$$
+
+Adam在实践中得到了广泛应用，在特定任务上，其可能不是最佳的优化器, 但在大部分任务上，其都能有不错的可以作为基线的表现。
+
+## Initialization of weights
+初始化参数很重要
+- weights don't move "that much"
+- choice of initailization matters
+
+Let’s just initialize weights “randomly”, e.g., \( W_i \sim \mathcal{N}(0, \sigma^2 I) \)
+
+The choice of variance \( \sigma^2 \) will affect two (related) quantities:
+
+1. The norm of the forward activations \( Z_i \)
+2. The norm of the the gradients \( \nabla_{W_i} \ell(h_\theta(X), y) \)
+
+于是可能会出现梯度消失或者爆炸的问题
+
+Consider independent random variables \( x \sim \mathcal{N}(0, 1) \), \( w \sim \mathcal{N}(0, \frac{1}{n}) \); then  
+\[E[x_i w_i] = E[x_i]E[w_i] = 0, \quad \text{Var}[x_i w_i] = \text{Var}[x_i]\text{Var}[w_i] = \frac{1}{n}\]  
+so  
+\[E[w^T x] = 0, \quad \text{Var}[w^T x] = 1 \quad (w^T x \to \mathcal{N}(0, 1)) \quad \text{by central limit theorem}\]   
+
+Thus, informally speaking if we used a linear activation and \( z_i \sim \mathcal{N}(0, I) \), \( W_i \sim \mathcal{N}(0, \frac{1}{n}I) \) then  
+\[z_{i+1} = W_i^T z_i \sim \mathcal{N}(0, I)\]  
+
+If we use a ReLU nonlinearity, then “half” the components of \( z_i \) will be set to zero, so we need twice the variance on \( W_i \) to achieve the same final variance, hence  
+\[W_i \sim \mathcal{N}(0, \frac{2}{n}I) \quad \text{(Kaiming normal initialization)} \]  
+
+PS: Kaiming 正态初始化的根本原因在于 **ReLU 激活函数对信号方差的减半效应**
