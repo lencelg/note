@@ -37,7 +37,7 @@ method: 编写module来声明依赖关系
 
 目录的结构如下：
 
-```
+```console
 oop-module
 ├── bin
 ├── build.sh
@@ -53,7 +53,6 @@ oop-module
 `src` 目录下的`module-info.java`就是编写module的文件
 
 ```java
-
 module hello.world {
     exports com.itranswarp.sample;
 
@@ -319,9 +318,244 @@ Java的`synchronized`锁是可重入锁；
 
 避免死锁的方法是多线程获取锁的**顺序要一致**。
 
+`synchronized` 并没有解决多线程协调的问题。
+
+在典型的producer-consumer里面就知道了，当资源之间的关系需要协调就会出问题
+
+```java
+class TaskQueue {
+    Queue<String> queue = new LinkedList<>();
+
+    public synchronized void addTask(String s) {
+        this.queue.add(s);
+    }
+
+    public synchronized String getTask() {
+        while (queue.isEmpty()) {
+        }
+        return queue.remove();
+    }
+}
+```
+
+`wait()`可以释放获得的锁, `wait()`方法返回时，线程又会重新试图获得锁。
+
+`notify()`可以让等待的线程被重新唤醒, `notifyAll()`唤醒所有当前正在等待某个锁的线程
+
+## ReentrantLock
+problem: `synchronized`锁很重，并且获取时必须一直等待，没有额外的尝试机制。
+
+`java.util.concurrent.locks`包提供的`ReentrantLock`用于替代`synchronized`加锁
+
+```java
+public class Counter {
+    private final Lock lock = new ReentrantLock();
+    private int count;
+
+    public void add(int n) {
+        lock.lock();
+        try {
+            count += n;
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+`ReentrantLock`是可重入的锁
+
+使用`conditional`来进行`ReentrantLock`的协调关系
+- `await()`会释放当前锁，进入等待状态；
+- `signal()`会唤醒某个等待线程；
+- `signalAll()`会唤醒所有等待线程；
+- 唤醒线程从`await()`返回后需要重新获得锁。
+
+完整的例子如下：
+
+```java
+class TaskQueue {
+    private final Lock lock = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+    private Queue<String> queue = new LinkedList<>();
+
+    public void addTask(String s) {
+        lock.lock();
+        try {
+            queue.add(s);
+            condition.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public String getTask() {
+        lock.lock();
+        try {
+            while (queue.isEmpty()) {
+                condition.await();
+            }
+            return queue.remove();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+## ReadWriteLock
+`ReentrantLock`保证了只有一个线程可以执行临界区代码：
+
+`ReadWriteLock`是典型的读者-写者问题的锁：
+- 只允许一个线程写入（其他线程既不能写入也不能读取）；
+- 没有写入时，多个线程允许同时读（提高性能）。
+
+```java
+public class Counter {
+    private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
+    // 注意: 一对读锁和写锁必须从同一个rwlock获取:
+    private final Lock rlock = rwlock.readLock();
+    private final Lock wlock = rwlock.writeLock();
+    private int[] counts = new int[10];
+
+    public void inc(int index) {
+        wlock.lock(); // 加写锁
+        try {
+            counts[index] += 1;
+        } finally {
+            wlock.unlock(); // 释放写锁
+        }
+    }
+
+    public int[] get() {
+        rlock.lock(); // 加读锁
+        try {
+            return Arrays.copyOf(counts, counts.length);
+        } finally {
+            rlock.unlock(); // 释放读锁
+        }
+    }
+}
+```
+## StampledLock
+problem: `ReadWriteLock` 如果有线程正在读，写线程需要等待读线程释放锁后才能获取写锁，即读的过程中不允许写，这是一种悲观的读锁。
+
+`StampedLock` 是java新的读写锁: 读的过程中也允许获取写锁后写入！这样一来，我们**读的数据就可能不一致**，所以需要一点**额外的代码**来判断读的过程中是否有写入，这种读锁是一种**乐观锁**。
+
+乐观锁于悲观锁
+- 乐观锁的意思就是乐观地估计读的过程中大概率不会有写入
+- 悲观锁则是读的过程中拒绝有写入，也就是写入必须等待。
+
+首先通过`tryOptimisticRead()`获取一个乐观读锁，并返回版本号
+
+接着进行读取，读取完成后，我们通过validate()去验证版本号，如果在读取过程中没有写入，版本号不变，验证成功，我们就可以放心地继续后续操作。
+
+这里有趣的是评论区的话题： 最后的return部分可能被一个写的线程改变了 `x`, `y`的值，所以返回的数据还是正确的。
+
+```java
+public class Point {
+    private final StampedLock stampedLock = new StampedLock();
+
+    private double x;
+    private double y;
+
+    public void move(double deltaX, double deltaY) {
+        long stamp = stampedLock.writeLock(); // 获取写锁
+        try {
+            x += deltaX;
+            y += deltaY;
+        } finally {
+            stampedLock.unlockWrite(stamp); // 释放写锁
+        }
+    }
+
+    public double distanceFromOrigin() {
+        long stamp = stampedLock.tryOptimisticRead(); // 获得一个乐观读锁
+        // 注意下面两行代码不是原子操作
+        // 假设x,y = (100,200)
+        double currentX = x;
+        // 此处已读取到x=100，但x,y可能被写线程修改为(300,400)
+        double currentY = y;
+        // 此处已读取到y，如果没有写入，读取是正确的(100,200)
+        // 如果有写入，读取是错误的(100,400)
+        if (!stampedLock.validate(stamp)) { // 检查乐观读锁后是否有其他写锁发生
+            stamp = stampedLock.readLock(); // 获取一个悲观读锁
+            try {
+                currentX = x;
+                currentY = y;
+            } finally {
+                stampedLock.unlockRead(stamp); // 释放悲观读锁
+            }
+        }
+        return Math.sqrt(currentX * currentX + currentY * currentY);
+    }
+}
+```
+`StampledLock`是不可以重入的锁，但是并发性高了一些
+
+## Semaphore
+本质上锁的目的是保护一种受限资源.
+
+还有一种受限资源，它需要保证同一时刻最多有N个线程能访问.
+
+`Semaphore`本质上就是一个信号计数器，用于限制同一时间的最大访问数量。
+
+```java
+public class AccessLimitControl {
+    // 任意时刻仅允许最多3个线程获取许可:
+    final Semaphore semaphore = new Semaphore(3);
+
+    public String access() throws Exception {
+        // 如果超过了许可数量,其他线程将在此等待:
+        semaphore.acquire();
+        try {
+            // TODO:
+            return UUID.randomUUID().toString();
+        } finally {
+            semaphore.release();
+        }
+    }
+}
+```
+
+`Semaphore(1)`就相当于锁的功能
+
+## Concurrent sets
+thread-safe datastructures
+
+| interface     | non-thread-safe           | thread-safe    |
+|---|---|---|
+| List          | ArrayList                 | CopyOnWriteArrayList    |
+| Map           | HashMap                   | ConcurrentHashMap    |
+| Set           | HashSet / TreeSet         | CopyOnWriteArrayList    |
+| Queue         | ArrayDeque / LinkedList   | ArrayBlockingQueue / LinkedBlockingQueue |
+| Deque         | ArrayDeque / LinkedList   | LinkedBlockingDeque    |
+
+## Atomic
+使用`java.util.concurrent.atomic`提供的原子操作可以简化多线程编程：
+- 原子操作实现了无锁的线程安全；
+- 适用于计数器，累加器等。
+
+## thread pool
+创建线程需要操作系统资源（线程资源，栈空间等），频繁创建和销毁大量线程需要消耗大量时间。
+
+可以把很多小任务让一组线程来执行，而不是一个任务对应一个新线程。这种能接收大量小任务并进行分发处理的就是**线程池**。
+
+`ExecutorService`接口表示线程池, Java标准库提供实现类有：
+- `FixedThreadPool`：线程数固定的线程池；
+- `CachedThreadPool`：线程数根据任务动态调整的线程池；
+- `SingleThreadExecutor`：仅单线程执行的线程池。
+
+评论区的提问： 大厂规定不能使用Executors去创建线程池?
+
+answer: 因为容易OOM，Executors的底层实现的`BlockingQueue`是一个无边界的队列，默认没有限制创建线程的个数，默认是最大Integer.MAX_VALUE;
+
+## Future
+Future异步的教程介绍一般，没有多少内容
+
 # Java8
 ## lambda
-```
+```console
 // 1. 不需要参数,返回值为 5  
 () -> 5  
   
@@ -339,4 +573,7 @@ x -> 2 * x
 ```
 
 ## Optional
-Optional 类是一个可以为null的容器对象。如果值存在则isPresent()方法会返回true，调用get()方法会返回该对象。
+Optional 类是一个可以为null的容器对象。
+
+如果值存在则`isPresent()`方法会返回`true`，调用`get()`方法会返回该对象。
+
