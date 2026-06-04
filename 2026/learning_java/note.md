@@ -897,4 +897,157 @@ Spring 生态目前包含 **22 个主要活跃项目**，每个项目都有独�
 | Spring Batch | 批处理层 | 高效处理大批量数据作业 | ETL、报表生成、数据迁移 |
 | Spring for Apache Kafka | 消息层 | 为 Kafka 提供 Spring 风格抽象 | 简化消息队列接入 |
 
+# MyBatis
 
+在 MyBatis 出现之前，Java 开发者主要通过原生 **JDBC** 直接操作数据库，但这种方式在稍具规模的项目中会暴露很多问题：
+
+| 痛点 | 具体问题 |
+|------|----------|
+| **代码重复** | 每次操作都需要手动获取连接、创建 Statement、处理异常、关闭资源，模板代码充斥业务逻辑 |
+| **SQL 与代码强耦合** | SQL 语句以字符串形式硬编码在 Java 代码中，难以维护和调试 |
+| **参数设置繁琐** | 需要手动为 PreparedStatement 的占位符逐个设置参数（`ps.setInt(1, id)`），容易出错 |
+| **结果集处理复杂** | 需要手动遍历 ResultSet，逐列取值并封装到 Java 对象中，代码冗长且重复 |
+| **动态 SQL 拼接困难** | 当查询条件不确定时，需用大量 `if` 语句手动拼接 SQL 字符串，极易出错且存在 SQL 注入风险 |
+
+MyBatis 的目标正是解决这些问题：它提取并封装了几乎所有 JDBC 的样板代码，将 SQL 与 Java 代码解耦，同时提供灵活的结果集自动映射能力，让开发者可以聚焦于 SQL 本身和业务逻辑。
+
+MyBatis 是一款开源的、轻量级的 Java 持久层框架（半自动 ORM 框架），通过 XML 或注解的方式，将 SQL 语句与 Java 对象解耦，并自动完成参数映射和结果集映射.
+
+## 核心定位：半自动 ORM 框架
+
+理解 MyBatis 的关键是分清“半自动”与“全自动”。
+
+| 类型 | 代表框架 | 特点 |
+|------|----------|------|
+| **全自动 ORM** | Hibernate / JPA | 框架自动生成 SQL，开发者无需手写 SQL，只需操作 Java 对象 |
+| **半自动 ORM** | MyBatis | 框架不自动生成 SQL，需要开发者**手动编写 SQL**，但会帮我们自动处理参数绑定和结果集封装 |
+
+MyBatis 被称为“半自动”，正是因为它需要开发者**手动编写 SQL**。但框架会完成参数自动注入（`#{}`）、结果自动映射等核心工作，避免了几乎所有的 JDBC 代码和手动参数设置。
+
+> **设计理念：“SQL 透明化”**
+> 与 Hibernate 尽量屏蔽 SQL 不同，MyBatis 的设计哲学是保留 SQL 的**完全可控性**，让开发者可以直接编写并优化原生 SQL，同时在参数映射、动态 SQL、缓存和插件拦截器等方面提供强大能力。
+
+## 消除 JDBC 样板代码
+
+MyBatis 通过封装 JDBC 底层细节，大幅简化数据库操作。
+
+```java
+// JDBC 方式（繁琐）
+Connection conn = dataSource.getConnection();
+PreparedStatement ps = conn.prepareStatement("SELECT * FROM user WHERE id = ?");
+ps.setInt(1, id);
+ResultSet rs = ps.executeQuery();
+if (rs.next()) {
+    user.setId(rs.getInt("id"));
+    user.setName(rs.getString("name"));
+}
+// 关闭资源...
+
+// MyBatis 方式（简洁）
+@Select("SELECT * FROM user WHERE id = #{id}")
+User getUserById(int id);
+```
+
+##  精细化 SQL 控制
+
+MyBatis 允许开发者**完全掌控 SQL 语句**，这是它区别于 JPA/Hibernate 的最大特点。
+
+| 能力 | 说明 |
+|------|------|
+| **多表关联优化** | 手动控制 JOIN 策略，在订单查询场景中，通过 `LEFT JOIN` 实现关联查询，比 JPA 的默认策略更高效 |
+| **存储过程调用** | 直接调用数据库存储过程，如 MySQL 的 `CALL sp_get_user_data(?)` |
+| **数据库特性利用** | 充分利用数据库特定语法，如 PostgreSQL 的窗口函数 `ROW_NUMBER()` |
+| **SQL 调优空间** | 针对复杂查询，可以精准控制索引使用和查询计划优化 |
+
+###  强大的动态 SQL
+
+MyBatis 通过丰富的 XML 标签体系，让开发者可以用声明式的方式构建动态查询，完全避免了 Java 代码中手动拼接 SQL 的繁琐与安全隐患。
+
+| 标签 | 作用 |
+|------|------|
+| `<if>` | 条件判断 |
+| `<choose>/<when>/<otherwise>` | 多条件分支选择 |
+| `<where>` | 智能处理 WHERE 子句，自动去除多余 AND/OR |
+| `<set>` | 安全生成 UPDATE 语句 |
+| `<foreach>` | 遍历集合并入 |
+
+**典型示例：多条件动态查询**
+```xml
+<select id="findActiveUsers" resultType="User">
+    SELECT * FROM users
+    <where>
+        <if test="name != null">
+            AND name like #{name}
+        </if>
+        <if test="email != null">
+            AND email = #{email}
+        </if>
+    </where>
+</select>
+```
+以上代码会根据传入参数的有无，自动生成包含不同条件的 SQL 语句，大幅提升复用性和灵活性。
+
+## 灵活的映射体系
+
+MyBatis 提供了从数据库列到 Java 对象属性的完整映射能力：
+
+| 映射类型 | 适用场景 |
+|----------|----------|
+| **自动映射**（resultType） | 数据库列名与 Java 属性名一致时，无需额外配置，自动完成映射 |
+| **显式映射**（resultMap） | 名称不一致、需要进行类型转换或涉及复杂嵌套关联时，提供精细的定制能力 |
+
+```xml
+<resultMap id="orderMap" type="Order">
+    <id property="id" column="order_id"/>
+    <result property="orderNo" column="order_no"/>
+    <association property="user" javaType="User">
+        <id property="id" column="user_id"/>
+    </association>
+</resultMap>
+```
+
+## 多层次缓存体系
+
+MyBatis 内置两级缓存，帮助减少数据库访问压力：
+
+| 缓存级别 | 作用范围 | 说明 |
+|----------|----------|------|
+| **一级缓存** | SqlSession 级别 | 默认开启，相同查询在会话期间只执行一次 |
+| **二级缓存** | Mapper 级别 | 需手动配置，可在多个 SqlSession 之间共享，适用于读多写少的场景 |
+
+---
+
+## 工作流程
+
+MyBatis 的执行流程遵循清晰的步骤顺序，核心是动态代理技术：
+
+1. **加载配置**：读取 `mybatis-config.xml` 全局配置文件，解析数据源、事务管理等设置
+2. **构建 SqlSessionFactory**：通过 `SqlSessionFactoryBuilder` 创建 `SqlSessionFactory` 实例
+3. **获取 SqlSession**：工厂对象 `openSession()` 返回一个 `SqlSession`（线程私有）
+4. **获取 Mapper 代理对象**：调用 `getMapper(Class)` 方法，MyBatis 使用 JDK 动态代理为 Mapper 接口生成代理对象
+5. **执行 SQL**：调用代理对象的方法时，MyBatis 从 `Configuration` 中获取 `MappedStatement`，通过 `Executor`、`StatementHandler`、`ParameterHandler` 和 `ResultSetHandler` 四个核心组件，依次完成 SQL 执行和结果映射的全过程
+6. **关闭会话**：释放数据库连接，归还至连接池
+
+## MyBatis-Plus
+MyBatis-Plus , 它在不改变 MyBatis 核心能力的前提下，通过封装大量高频操作，让开发者能以更低的成本、更优雅的代码完成数据访问。
+
+| 特性 | MyBatis | MyBatis-Plus |
+| --- | --- | --- |
+| **CRUD 操作** | 需要在 XML 或注解中手写SQL      | 继承 `BaseMapper<T>`，**零 SQL** 实现 |
+| **条件构造器** | 手动拼接 SQL 字符串，繁琐且易错 | 提供 **Lambda 表达式**构建条件，优雅且安全 |
+| **分页查询** | **手动**写 SQL `limit` 子句并计算偏移量 | **内置插件**，只需传入页码和页大小即可 |
+| **复杂查询支持** | 灵活编写 动态 SQL，可控性极高 | 在原生 MyBatis 基础上增强，复杂场景**无缝复用**原有能力 |
+| **适用场景** | 对 SQL 有精细控制需求，逻辑复杂多变 | 单表操作占主导、追求极致开发效率的场景 |
+
+> **结论**：MyBatis 像手动挡汽车，体验驾驶乐趣但操作繁琐；MyBatis-Plus 像自动挡汽车，操作简单，是高效通勤的利器。两者也可结合使用，在 `BaseMapper` 无法满足时，依然可以手写 SQL。
+
+后面还有redis, 消息队列，nginx， netty网络编程，微服务的话题, 不多介绍了
+
+# personal view
+java作为一种很规范化的语言，在工业界是很稳定的，大概也是收欢迎的重要原因。
+
+各种库，产品都是市场这么多年筛选下来的, 看起来多，其实感觉就很行。
+
+在各种框架的帮助下开发也更简单了，算是理解石山代码的现代软件了。
+
+java的后端了解大概就到这里了
