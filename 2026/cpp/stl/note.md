@@ -262,3 +262,84 @@ Central map (指针数组)
 2. GP(Generic programming) 是将 datas 和 methods 分开来
 
 STL 是 GP 的思想
+
+> 所有 algorithms，其内最终涉及元素本身的操作，无非就是比大小。
+
+于是要学习操作重载和模板
+
+## Operator Overloading
+
+| Expression | As member function | As non-member function | Example |
+|---|---|---|---|
+| @a | (a).operator@() | operator@ (a) | !std::cin calls std::cin.operator!() |
+| a@b | (a).operator@ (b) | operator@ (a, b) | std::cout << 42 calls std::cout.operator<<(42) |
+| a=b | (a).operator= (b) | cannot be non-member | std::string s; s = "abc"; calls s.operator="abc" |
+| a[b] | (a).operator\[\](b) | cannot be non-member | std::map<int, int> m; m\[1\] = 2; calls m.operator\[\](1) |
+| a-> | (a).operator->() | cannot be non-member | std::unique_ptr<S> ptr(new S); ptr->bar() calls ptr.operator->() |
+| a@ | (a).operator@ (0) | operator@ (a, 0) | std::vector<int>::iterator i = v.begin(); i++ calls i.operator++(0) |
+
+> In this table, @ is a placeholder representing all matching operators: all prefix operators in @a, all postfix operators other than -> in a@, all infix operators other than = in a@b
+
+Specialization
+
+这里的思想和 rust 的`trait`的思想很像
+
+泛化指的是定义模板时的**通用**版本（主模板，primary template），适用于所有类型。
+
+特化是指针对**一个或多个特定模板参数**给出专门的实现
+- 全特化（Explicit Specialization）：指定所有模板参数。
+- 偏特化（Partial Specialization）：只指定部分模板参数（仅限类模板）。
+
+```cpp
+template <class Key> struct hash { };
+
+template<>  
+STL_TEMPLATE_NULL struct hash<char> {  
+    size_t operator()(char x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<short>() {  
+    size_t operator()(short x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<unsigned short> {  
+    size_t operator()(unsigned short x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<int> {  
+    size_t operator()(int x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<unsigned int> {  
+    size_t operator()(unsigned int x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<long> {  
+    size_t operator()(long x) const { return x; }  
+};  
+
+STL_TEMPLATE_NULL struct hash<unsigned long> {  
+    size_t operator()(unsigned long x) const { return x; }  
+};  
+```
+
+## allocator
+侯捷老师在这里主要讲解了vs6, bc5, gnuc2.9(`<defalloc.h>`)的`allocator`的实现，底层都是使用`malloc()`, `free()`实现的， 效果都不太理想
+
+在典型的c语言的`malloc()`下内存里面会记录分配的大小，于是`free()`的时候不需要进行大小指定。
+
+但是在`container`的思想下我们知道单个容器的大小，无需再分配的内存里面储存分配的大小
+
+后面就是介绍了gnuc 2.9 `<stl::alloc>`
+
+**GCC 2.9 STL 分配器 (`std::alloc`)**核心要点：
+- **两级配置器**：以 **128 字节** 为界。
+  - **第一级**：大内存（>128B）→ 直接调用 `malloc`/`free`。
+  - **第二级**：小内存（≤128B）→ 内存池 + 自由链表管理。
+- **自由链表**：16 条链表，负责大小 **8, 16, … , 128 字节**（8 的倍数）的内存块。
+- **无 cookie 开销**：内存池从系统申请一大块，内部分配的小块无额外头部信息，极大节约内存。
+- **效率高**：避免频繁调用 `malloc`，减少碎片。
+
+GCC 4.9 STL Allocator 的默认分配器就是`malloc()/free()`的包装
+
+GCC 2.9 时代的 `std::alloc` 的后继成为了`__gnu_cxx::__pool_alloc<T>`
