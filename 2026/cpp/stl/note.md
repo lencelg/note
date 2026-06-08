@@ -323,7 +323,7 @@ STL_TEMPLATE_NULL struct hash<unsigned long> {
 };  
 ```
 
-## allocator
+# allocator
 侯捷老师在这里主要讲解了vs6, bc5, gnuc2.9(`<defalloc.h>`)的`allocator`的实现，底层都是使用`malloc()`, `free()`实现的， 效果都不太理想
 
 在典型的c语言的`malloc()`下内存里面会记录分配的大小，于是`free()`的时候不需要进行大小指定。
@@ -343,3 +343,70 @@ STL_TEMPLATE_NULL struct hash<unsigned long> {
 GCC 4.9 STL Allocator 的默认分配器就是`malloc()/free()`的包装
 
 GCC 2.9 时代的 `std::alloc` 的后继成为了`__gnu_cxx::__pool_alloc<T>`
+
+# Container 
+
+## list
+
+值得一提的是`iterator`是指针的容器，对于类似`++iterator`的操作我们希望指向下一个`node`, 而不是数值的增加，所以`iterator`其实是一个类容器来实现了指定的operator overloading，算是某种意义上的智能指针。
+
+下面是gnuc 2.9 stl 的list主要讲解代码, 要记得postfix form 和 prefix form 的`++`的函数行为
+
+```cpp
+template <class T>
+struct __list_node {
+    typedef void* void pointer;
+    void pointer prev;
+    void pointer next;
+    T data;
+};
+
+template <class T, class Alloc = alloc>
+class list {
+protected:
+    typedef __list_node<T> list_node;
+public:
+    typedef list_node* link_type;
+    typedef __list_iterator<T,T&,T*> iterator;
+protected:
+    link_type node;
+...
+};
+
+template<class T, class Ref, class Ptr>
+struct __list_iterator {
+    typedef T value_type;
+    typedef Ptr pointer;
+    typedef Ref reference;
+...
+
+template<class T, class Ref, class Ptr>
+struct __list_iterator {
+    typedef __list_iterator<T, Ref, Ptr> self;
+    typedef bidirectional_iterator_tag iterator_category; //(1)
+    typedef T value_type;    //(2)
+    typedef Ptr pointer;    //(3)
+    typedef Ref reference;    //(4)
+    typedef __list_node<T>* link_type;
+    typedef ptrdiff_t difference_type;    //(5)
+
+    link_type node;
+
+    reference operator*() const { return (*node).data; }
+    pointer operator->() const { return &(operator*()); }
+    self& operator++()
+    {
+        node = (link_type)((*node).next); return *this;
+    }
+    self operator++(int)
+    {
+        self tmp = *this; ++*this; return tmp;
+    }
+};
+```
+
+gnuc 4.9 stl 的 list 实现的传值就优雅了很多, 但是类之间的继承关系就复杂了不少
+
+![](./img/list_improve.png)
+
+记得`iterator`的设计是左闭右开的，所以list的实现是在最后创建一个额外不包含`data`的节点, 这个节点的`prev`指向最后一个有效元素，`next`指向第一个有效元素
