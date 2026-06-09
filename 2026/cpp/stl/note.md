@@ -404,7 +404,7 @@ iterator_category分为五大类
 # Container 
 
 ## vector
-这里直接看源码就好了, gnuc 2.9
+这里直接看主要的源码就好了, gnuc 2.9
 
 ```cpp
 // ---------- vector 核心定义 ----------
@@ -637,5 +637,277 @@ gnuc 4.9 stl 的 list 实现的传值就优雅了很多, 但是类之间的继�
 
 ## array and forward-list
 
-这里不多做介绍了
+这里不多做介绍了, 基本的模板设计还是大差不差的
 
+## deque queue stack
+
+前面已经介绍`deque`了, `queue` 和 `stack` 的底层可以是`deque`或者是`list`.
+
+`stack` 和 `queue` 不**允许**遍历，也不提供`iterator`
+
+## rb_tree
+rb_tree 的 iterator 的走法是中序遍历的走法, 这里基于SGI STL代码进行学习
+
+```cpp
+template <class Key, class Value, class KeyOfValue, class Compare, class Alloc = alloc>
+class rb_tree { ... };
+```
+*   **`Key`**: 排序依据的键值类型。
+*   **`Value`**: 红黑树节点的数据类型。在 `set` 里 `Value` 就是键值本身；在 `map` 里则是 `pair<const Key, T>`。
+*   **`KeyOfValue`**: 一个**仿函数**，用于从 `Value` 中提取出 `Key` 来比较。
+*   **`Compare`**: 比较两个 `Key` 大小的仿函数，默认为 `std::less<Key>`。
+*   **`Alloc`**: 空间配置器，默认为 SGI 高效的内存池分配器 `alloc`。
+
+SGI STL 对节点采用了双层设计，将树的组织逻辑与节点数据分离。一个名为 `header` 的“超级头节点”简化了边界情况的处理，它并不存放具体数据，其指针分别指向根节点、最左节点和最右节点。
+
+```cpp
+// ---------- 节点定义 ----------
+typedef bool _Rb_tree_Color_type;
+const _Rb_tree_Color_type _S_rb_tree_red = false;    // 红色为0
+const _Rb_tree_Color_type _S_rb_tree_black = true;   // 黑色为1
+
+// 节点基础结构，只包含树的组织信息
+struct _Rb_tree_node_base {
+    _Rb_tree_Color_type _M_color;          // 红黑树的颜色标记
+    _Base_ptr _M_parent;                   // 指向父节点
+    _Base_ptr _M_left;                     // 指向左子节点
+    _Base_ptr _M_right;                    // 指向右子节点
+};
+
+// 真正的节点，继承自基础结构，并添加数据字段
+template <class _Value>
+struct _Rb_tree_node : public _Rb_tree_node_base {
+    _Value _M_value_field;                 // 节点中实际存储的数据
+};
+```
+
+红黑树只记录三个核心变量
+
+```cpp
+template <class Key, class Value, ...>
+class rb_tree {
+protected:
+    size_type node_count;   // 1. 记录树中节点总数
+    link_type header;       // 2. 指向巧妙的“header”节点
+    Compare key_compare;    // 3. 键值大小比较的函数对象
+    ...
+};
+```
+
+`rb_tree` 支持两种插入模式，其底层逻辑高度抽象，所有旋转和调整操作均封装在底层的`_M_insert`函数中，插入后都会调用统一的恢复函数 `_M_rebalance` 来修正红黑树的性质。
+
+*   **允许重复键 (`insert_equal`)**：当遇到等于当前节点的键时，它会**向右**搜索，直到找到合适的位置插入。
+*   **禁止重复键 (`insert_unique`)**：当遇到等于当前节点的键时，它会返回该键所在位置，避免重复插入。
+
+`erase` 的逻辑比插入更复杂。SGI STL 在删除节点时，采用的是**替换连接 (relink)** 而非拷贝值 (copy) 的方式。这种方法的好处在于，它只会使**指向被删除节点的迭代器**失效，而指向其他元素的迭代器则保持有效。
+
+gnuc 4.9 版本的实现符合oop的 handle/body pattern, 看起来关系就复杂了一些
+
+![](/img/rb_tree.png)
+
+## set/multiset
+set/multiset 以 rb_tree 作为底层结构, 它们的`value`和`key`合一, `key`就是`value`
+
+可以看一下带有解释的代码(gnuc 2.9)
+
+```cpp
+template <class Key, class Compare = less<Key>, class Alloc = alloc>
+class set {
+public:
+    // 类型定义
+    typedef Key key_type;
+    typedef Key value_type;          // key 和 value 类型相同
+    typedef Compare key_compare;
+    typedef Compare value_compare;
+
+private:
+    // 底层红黑树：identity<value_type> 直接返回键值本身
+    typedef rb_tree<key_type, value_type,
+                    identity<value_type>, key_compare, Alloc> rep_type;
+    rep_type t;   // 核心存储
+
+public:
+    // ---------- 迭代器相关 ----------
+    // 关键：set 的 iterator 是底层红黑树的 const_iterator
+    // 原因：set 的元素不允许通过迭代器修改，以维护有序性和唯一性
+    typedef typename rep_type::const_iterator iterator;
+    typedef typename rep_type::const_iterator const_iterator;
+    
+    // 反向迭代器同理，也是 const 版本
+    typedef typename rep_type::const_reverse_iterator reverse_iterator;
+    typedef typename rep_type::const_reverse_iterator const_reverse_iterator;
+
+    // 迭代器获取函数：直接返回底层红黑树的 const 迭代器
+    iterator begin() const { return t.begin(); }
+    iterator end()   const { return t.end(); }
+    const_iterator cbegin() const { return t.begin(); }
+    const_iterator cend()   const { return t.end(); }
+    
+    reverse_iterator rbegin() const { return t.rbegin(); }
+    reverse_iterator rend()   const { return t.rend(); }
+
+    // ---------- 其余接口（仅为示例）----------
+    set() : t() {}
+    explicit set(const Compare& comp) : t(comp) {}
+    
+    // 插入（保证唯一性）
+    pair<iterator, bool> insert(const value_type& x) {
+        pair<typename rep_type::iterator, bool> p = t.insert_unique(x);
+        return pair<iterator, bool>(p.first, p.second);
+    }
+    
+    iterator find(const key_type& x) const { return t.find(x); }
+    size_type erase(const key_type& x) { return t.erase(x); }
+    size_type size() const { return t.size(); }
+    bool empty() const { return t.empty(); }
+    // ... 其他成员函数类似
+};
+
+/* 迭代器特性说明：
+ *
+ * 1. 类型：双向迭代器 (bidirectional_iterator_tag)
+ *    - 支持 ++, -- 操作，但不支持随机跳转（如 it + n）
+ *    - 递增/递减操作均摊 O(1)
+ *
+ * 2. 只读性：
+ *    - set 的 iterator 实际是 const_iterator，因此 *it 返回 const Key&
+ *    - 无法通过迭代器修改元素值（保证有序容器的不变性）
+ *
+ * 3. 有效性：
+ *    - 插入操作：所有已有迭代器保持有效（红黑树不重新分配节点）
+ *    - 删除操作：仅指向被删除元素的迭代器失效，其他迭代器依然有效
+ *
+ * 4. 遍历顺序：
+ *    - 按升序遍历（由 Compare 决定，默认为 less<Key>）
+ *    - 基于红黑树的中序遍历（左-根-右）实现
+ *
+ * 5. 底层实现：
+ *    - 复用 rb_tree 的 const_iterator，不单独编写迭代器类
+ *    - 因此 set 的迭代器行为与 rb_tree 的 const 迭代器完全一致
+ */
+ ```
+
+ ## map/multimap
+ map/multimap 都是以 rb_tree 作为底层，排序的依据是 `key`
+
+也是建议看带解释的源码
+
+ ```cpp
+ // gnuc 2.9 slt map
+
+template <class Key, class T, class Compare = less<Key>, class Alloc = alloc>
+class map {
+public:
+    // 类型定义
+    typedef Key key_type;
+    typedef T data_type;
+    typedef T mapped_type;
+    typedef pair<const Key, T> value_type;   // 注意：键是 const 的
+    typedef Compare key_compare;
+
+    // 比较仿函数：用于比较两个 value_type 的键
+    class value_compare : public binary_function<value_type, value_type, bool> {
+        friend class map;
+    protected:
+        Compare comp;
+        value_compare(Compare c) : comp(c) {}
+    public:
+        bool operator()(const value_type& x, const value_type& y) const {
+            return comp(x.first, y.first);
+        }
+    };
+
+private:
+    // 底层红黑树：Key 为键类型，Value 为 pair<const Key, T>
+    // select1st<value_type> 用于从 pair 中取出 first（即键）
+    typedef rb_tree<key_type, value_type,
+                    select1st<value_type>, key_compare, Alloc> rep_type;
+    rep_type t;   // 核心存储
+
+public:
+    // ---------- 迭代器相关 ----------
+    // map 的迭代器不是 const 的！因为允许修改值（mapped_type）
+    // 但键部分不可修改（因为 value_type 的 first 是 const）
+    typedef typename rep_type::iterator iterator;
+    typedef typename rep_type::const_iterator const_iterator;
+    typedef typename rep_type::reverse_iterator reverse_iterator;
+    typedef typename rep_type::const_reverse_iterator const_reverse_iterator;
+
+    // 迭代器获取函数
+    iterator begin() { return t.begin(); }
+    const_iterator begin() const { return t.begin(); }
+    iterator end()   { return t.end(); }
+    const_iterator end() const { return t.end(); }
+    
+    reverse_iterator rbegin() { return t.rbegin(); }
+    const_reverse_iterator rbegin() const { return t.rbegin(); }
+    reverse_iterator rend()   { return t.rend(); }
+    const_reverse_iterator rend() const { return t.rend(); }
+
+    // ---------- 核心接口 ----------
+    map() : t() {}
+    explicit map(const Compare& comp) : t(comp) {}
+
+    // 插入：使用 insert_unique（键唯一）
+    pair<iterator, bool> insert(const value_type& x) {
+        return t.insert_unique(x);
+    }
+
+    // 查找：基于键
+    iterator find(const key_type& k) {
+        // 需要临时构造一个 value_type 对象用于查找，但只比较键
+        // 实际红黑树实现有优化版本
+        return t.find(value_type(k, T()));
+    }
+    const_iterator find(const key_type& k) const {
+        return t.find(value_type(k, T()));
+    }
+
+    // 通过键访问值（如果不存在则插入默认值）
+    T& operator[](const key_type& k) {
+        return (*((insert(value_type(k, T()))).first)).second;
+    }
+
+    // 删除
+    size_type erase(const key_type& k) {
+        return t.erase(k);
+    }
+    void erase(iterator pos) { t.erase(pos); }
+
+    size_type size() const { return t.size(); }
+    bool empty() const { return t.empty(); }
+    void clear() { t.clear(); }
+    // ... 其他成员函数类似
+};
+
+/* 迭代器特性说明：
+ *
+ * 1. 类型：双向迭代器 (bidirectional_iterator_tag)
+ *    - 支持 ++, --，但不支持随机跳转
+ *
+ * 2. 修改限制：
+ *    - iterator 指向 value_type (即 pair<const Key, T>)
+ *    - 可以通过 it->second = new_value 修改值（mapped_type）
+ *    - 不能通过 it->first 修改键，因为 first 是 const
+ *
+ * 3. 与 set 的迭代器对比：
+ *    - set 的 iterator 是 const_iterator，完全不可修改元素
+ *    - map 的 iterator 可以修改 second，不能修改 first
+ *
+ * 4. 有效性规则（同 rb_tree）：
+ *    - 插入操作不使任何已有迭代器失效
+ *    - 删除操作仅使指向被删元素的迭代器失效
+ *
+ * 5. 遍历顺序：
+ *    - 按键的升序遍历（由 Compare 决定，默认 less<Key>）
+ *    - 基于中序遍历（左-根-右），因此输出有序
+ *
+ * 6. 底层关键点：
+ *    - select1st<value_type> 仿函数：从 pair 中提取键用于比较
+ *      其实现为：const Key& operator()(const pair<Key,T>& p) const { return p.first; }
+ *    - 红黑树的 Key 和 Value 不同，KeyOfValue 用于从 Value 中提取 Key
+ *    - 这使得 rb_tree 可以存储任何类型，只要提供提取键的方法
+ */
+```
+
+## hashtable
