@@ -344,7 +344,231 @@ GCC 4.9 STL Allocator 的默认分配器就是`malloc()/free()`的包装
 
 GCC 2.9 时代的 `std::alloc` 的后继成为了`__gnu_cxx::__pool_alloc<T>`
 
+# Iterator
+迭代器通常会定义一些内嵌类型：
+- `iterator_category`：迭代器类型（如输入、输出、随机访问等）。
+- `value_type`：元素类型（例如 `int`）。
+- `difference_type`：表示两个迭代器之间距离的类型（通常是 `ptrdiff_t`）。
+- `pointer`：指向元素的指针类型。
+- `reference`：指向元素的引用类型。
+
+`iterator_traits` 提供了**统一的访问接口**。
+
+```cpp
+template <class I>
+struct iterator_traits {
+    typedef typename I::iterator_category iterator_category;
+    typedef typename I::value_type value_type;
+    typedef typename I::difference_type difference_type;
+    typedef typename I::pointer pointer;
+    typedef typename I::reference reference;
+};
+```
+
+- 对于**自定义迭代器类**（其内部定义了上述类型），`iterator_traits<I>` 直接取出这些类型。
+- 对于**原生指针**（如 `int*`），标准库提供了**偏特化版本**：
+  ```cpp
+  template <class T>
+  struct iterator_traits<T*> {
+      typedef random_access_iterator_tag iterator_category;
+      typedef T value_type;
+      typedef ptrdiff_t difference_type;
+      typedef T* pointer;
+      typedef T& reference;
+  };
+  ```
+  这样，`iterator_traits<int*>::value_type` 就是 `int`，无需指针自己定义类型。
+
+iterator_category分为五大类
+- **输入迭代器 (Input Iterator)**：这种迭代器所指的对象，不允许外界改变。只读（read only）。
+- **输出迭代器 (Output Iterator)**：唯写（write only）。
+- **前向迭代器 (Forward Iterator)**：允许“写入型”算法（例如 `replace()`）在此种迭代器所形成的区间上进行读写操作。
+- **双向迭代器 (Bidirectional Iterator)**：可双向移动。某些算法需要逆向走访某个迭代器区间（例如逆向拷贝某范围内的元素），可以使用双向迭代器。
+- **随机访问迭代器 (Random Access Iterator)**：前四种迭代器都只供应一部分指针算术能力（前三种支持 `operator++`，第四种再加上 `operator--`），第五种则涵盖所有指针算术能力，包括 `p+n`, `p-n`, `p[n]`, `p1-p2`, `p1<p2`。
+
+从属关系如下
+
+```
+          Input Iterator        Output Iterator
+              │                      │
+              └──────────┬───────────┘
+                         ▼
+                  Forward Iterator
+                         │
+                         ▼
+                Bidirectional Iterator
+                         │
+                         ▼
+               Random Access Iterator
+```
 # Container 
+
+## vector
+这里直接看源码就好了, gnuc 2.9
+
+```cpp
+// ---------- vector 核心定义 ----------
+template <class T, class Alloc = allocator<T> >
+class vector {
+public:
+    typedef T value_type;
+    typedef T* iterator;            // 迭代器就是原生指针
+    typedef const T* const_iterator;
+    typedef size_t size_type;
+    typedef ptrdiff_t difference_type;
+
+protected:
+    iterator start;          // 已用空间起始
+    iterator finish;         // 已用空间末尾（最后一个元素之后）
+    iterator end_of_storage; // 可用空间末尾
+
+    // 内部工具函数
+    void allocate_and_fill(size_type n, const T& x) {
+        start = Alloc::allocate(n);
+        finish = uninitialized_fill_n(start, n, x);
+        end_of_storage = start + n;
+    }
+
+public:
+    // 构造与析构
+    vector() : start(0), finish(0), end_of_storage(0) {}
+
+    vector(size_type n, const T& value) {
+        allocate_and_fill(n, value);
+    }
+
+    vector(const vector& other) {
+        size_type n = other.size();
+        start = Alloc::allocate(n);
+        finish = uninitialized_copy(other.begin(), other.end(), start);
+        end_of_storage = start + n;
+    }
+
+    ~vector() {
+        destroy(start, finish);
+        Alloc::deallocate(start, capacity());
+    }
+
+    vector& operator=(const vector& other) {
+        if (this != &other) {
+            // 简单实现：先销毁再拷贝
+            destroy(start, finish);
+            Alloc::deallocate(start, capacity());
+            size_type n = other.size();
+            start = Alloc::allocate(n);
+            finish = uninitialized_copy(other.begin(), other.end(), start);
+            end_of_storage = start + n;
+        }
+        return *this;
+    }
+
+    // 迭代器
+    iterator begin() { return start; }
+    const_iterator begin() const { return start; }
+    iterator end() { return finish; }
+    const_iterator end() const { return finish; }
+
+    // 容量相关
+    size_type size() const { return size_type(finish - start); }
+    size_type capacity() const { return size_type(end_of_storage - start); }
+    bool empty() const { return start == finish; }
+
+    // 元素访问
+    T& operator[](size_type n) { return *(start + n); }
+    const T& operator[](size_type n) const { return *(start + n); }
+
+    T& front() { return *start; }
+    T& back()  { return *(finish - 1); }
+
+    // 核心修改操作
+    void push_back(const T& x) {
+        if (finish != end_of_storage) {
+            construct(finish, x);
+            ++finish;
+        } else {
+            insert_aux(end(), x);
+        }
+    }
+
+    void pop_back() {
+        --finish;
+        destroy(finish);
+    }
+
+    void reserve(size_type n) {
+        if (n > capacity()) {
+            iterator new_start = Alloc::allocate(n);
+            iterator new_finish = uninitialized_copy(start, finish, new_start);
+            destroy(start, finish);
+            Alloc::deallocate(start, capacity());
+            start = new_start;
+            finish = new_finish;
+            end_of_storage = new_start + n;
+        }
+    }
+
+    // 通用插入辅助（当容量不足时被 push_back 调用）
+    void insert_aux(iterator position, const T& x) {
+        if (finish != end_of_storage) {
+            // 还有备用空间：从 position 开始向后移动元素
+            construct(finish, *(finish - 1));
+            ++finish;
+            T x_copy = x;
+            // 从后往前移动
+            iterator it = finish - 2;
+            for (; it != position; --it)
+                *it = *(it - 1);
+            *position = x_copy;
+        } else {
+            // 扩容：新容量 = 旧容量 * 2 (或 1)
+            size_type old_size = size();
+            size_type new_capacity = old_size != 0 ? 2 * old_size : 1;
+            iterator new_start = Alloc::allocate(new_capacity);
+            iterator new_finish = new_start;
+            // 拷贝到新内存
+            new_finish = uninitialized_copy(start, position, new_start);
+            construct(new_finish, x);
+            ++new_finish;
+            new_finish = uninitialized_copy(position, finish, new_finish);
+            // 清理旧内存
+            destroy(start, finish);
+            Alloc::deallocate(start, capacity());
+            // 更新指针
+            start = new_start;
+            finish = new_finish;
+            end_of_storage = new_start + new_capacity;
+        }
+    }
+
+    // 清空
+    void clear() {
+        erase(begin(), end());
+    }
+
+    // 擦除区间 [first, last)
+    iterator erase(iterator first, iterator last) {
+        iterator i = uninitialized_copy(last, finish, first);
+        destroy(i, finish);
+        finish = finish - (last - first);
+        return first;
+    }
+
+    iterator erase(iterator position) {
+        return erase(position, position + 1);
+    }
+
+    // 插入单个元素（简单版本）
+    void insert(iterator position, const T& x) {
+        if (position == end()) {
+            push_back(x);
+        } else {
+            // 通用插入，此处简化：直接调用 insert_aux
+            // 实际 SGI STL 中有更精细的实现
+            insert_aux(position, x);
+        }
+    }
+};
+```
 
 ## list
 
@@ -410,3 +634,8 @@ gnuc 4.9 stl 的 list 实现的传值就优雅了很多, 但是类之间的继�
 ![](./img/list_improve.png)
 
 记得`iterator`的设计是左闭右开的，所以list的实现是在最后创建一个额外不包含`data`的节点, 这个节点的`prev`指向最后一个有效元素，`next`指向第一个有效元素
+
+## array and forward-list
+
+这里不多做介绍了
+
