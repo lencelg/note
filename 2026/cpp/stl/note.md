@@ -788,7 +788,8 @@ public:
  ```
 
  ## map/multimap
- map/multimap 都是以 rb_tree 作为底层，排序的依据是 `key`
+
+`map/multimap` 都是以 `rb_tree` 作为底层，排序的依据是 `key`
 
 也是建议看带解释的源码
 
@@ -911,3 +912,657 @@ public:
 ```
 
 ## hashtable
+`hashtable` 是 SGI STL 中实现 `hash_set`、`hash_map`、`hash_multiset`、`hash_multimap` 等非标准关联容器的底层数据结构。
+
+采用**开链法**（separate chaining）处理哈希碰撞，具有平均 O(1) 的插入、查找和删除性能。
+
+### `hashtable` 类模板参数
+
+```cpp
+template <class Value, class Key, class HashFcn,
+          class ExtractKey, class EqualKey, class Alloc>
+class hashtable { ... };
+```
+
+| 参数 | 说明 |
+|------|------|
+| `Value` | 节点值的类型（`pair<const Key, T>` 或直接 `Key`） |
+| `Key` | 键的类型 |
+| `HashFcn` | 哈希函数对象，将 `Key` 转换为 `size_t` |
+| `ExtractKey` | 从 `Value` 中提取 `Key` 的函数对象 |
+| `EqualKey` | 比较两个键是否相等的函数对象 |
+| `Alloc` | 空间配置器，默认 `alloc` |
+
+### `hash_set`/`hash_map`
+
+`hash_set` 和 `hash_map` 是 `hashtable` 的直接适配器，几乎没有额外逻辑：
+
+```cpp
+// hash_set 简化示意
+template <class Key, class HashFcn, class EqualKey, class Alloc>
+class hash_set {
+    typedef hashtable<Key, Key, HashFcn, identity<Key>, EqualKey, Alloc> ht;
+    ht rep;   // 底层哈希表
+public:
+    iterator begin() const { return rep.begin(); }
+    pair<iterator, bool> insert(const value_type& x) { return rep.insert_unique(x); }
+    // ... 其他接口类似
+};
+```
+
+`hash_multiset` 和 `hash_multimap` 则使用 `hashtable` 的 `insert_equal` 接口，**允许重复键**。
+
+### 概览
+
+| 方面 | SGI STL `hashtable` 特点 |
+|------|--------------------------|
+| **碰撞解决** | 开链法（separate chaining），每个桶指向一个节点链表 |
+| **桶数组** | 使用 `vector<node*>`，支持动态扩容和随机访问 |
+| **扩容策略** | 桶大小取质数（预定义 28 个），元素数超过桶数时 `rehash` |
+| **迭代器** | 前向迭代器，仅支持 `++` 操作；内部记录当前节点和所属哈希表 |
+| **节点结构** | 自定义单向链表节点，无前驱指针 |
+| **哈希计算** | `bkt_num()` → `hash(key) % n` |
+| **泛型参数** | `Value`、`Key`、`HashFcn`、`ExtractKey`、`EqualKey`、`Alloc` |
+
+SGI STL 的 `hashtable` 实现是 C++11 之后 `std::unordered_set`、`std::unordered_map` 等容器的前身，其**开链法+质数扩容+前向迭代器**的核心思想一直延续至今。
+
+### 源码学习
+
+```cpp
+// 节点定义 -------------------------------------------------------------
+// 哈希表的每个元素存储在一个单向链表节点中
+template <class Value>
+struct __hashtable_node {
+    __hashtable_node* next;   // 指向链表中的下一个节点（碰撞时链接）
+    Value val;                // 实际存储的值（对于 hash_map 是 pair<const Key, T>）
+};
+
+// 迭代器定义 -----------------------------------------------------------
+// 这是一个前向迭代器（ForwardIterator），只能单向移动（++），不支持 --。
+template <class Value, class Key, class HashFcn, class ExtractKey, class EqualKey, class Alloc>
+struct __hashtable_iterator {
+    // 迭代器类型定义（用于 iterator_traits）
+    typedef forward_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef Value* pointer;
+    typedef Value& reference;
+    typedef ptrdiff_t difference_type;
+    typedef __hashtable_iterator<Value, Key, HashFcn, ExtractKey, EqualKey, Alloc> self;
+    typedef hashtable<Value, Key, HashFcn, ExtractKey, EqualKey, Alloc> hashtable;
+
+    // 迭代器内部状态
+    __hashtable_node<Value>* cur;   // 当前节点指针
+    hashtable* ht;                  // 指向所属哈希表（用于跨桶跳转）
+
+    // 构造函数
+    __hashtable_iterator() : cur(0), ht(0) {}
+    __hashtable_iterator(__hashtable_node<Value>* c, hashtable* h) : cur(c), ht(h) {}
+
+    // 解引用操作
+    reference operator*() const { return cur->val; }
+    pointer operator->() const { return &(operator*()); }
+
+    // 前置 ++（核心：实现跨桶遍历）
+    self& operator++() {
+        const __hashtable_node<Value>* old = cur;
+        cur = cur->next;                     // 第一步：尝试移动到当前链表的下一个节点
+        if (!cur) {                          // 当前链表已到末尾，需要跨到下一个非空桶
+            // 计算当前节点原先所在的桶号（需要根据旧节点值计算）
+            size_t bucket = ht->bkt_num(old->val);
+            // 从下一个桶开始向后搜索，直到找到一个非空桶
+            while (!cur && ++bucket < ht->buckets.size())
+                cur = ht->buckets[bucket];   // 将 cur 指向该桶的第一个节点
+        }
+        return *this;
+    }
+
+    // 后置 ++
+    self operator++(int) {
+        self tmp = *this;
+        ++*this;
+        return tmp;
+    }
+
+    // 比较两个迭代器是否相等（依据是否指向同一个节点）
+    bool operator==(const self& it) const { return cur == it.cur; }
+    bool operator!=(const self& it) const { return cur != it.cur; }
+};
+
+// 模板参数说明：
+//   Value      : 节点存储的值类型（对于 hash_set = Key，对于 hash_map = pair<const Key,T>）
+//   Key        : 键的类型
+//   HashFcn    : 哈希函数对象，函数签名 size_t operator()(const Key&) const
+//   ExtractKey : 从 Value 中提取 Key 的函数对象，例如 identity (原样返回) 或 select1st (取 pair.first)
+//   EqualKey   : 判断两个 Key 是否相等的函数对象
+//   Alloc      : 空间配置器，默认 SGI 内存池 alloc
+template <class Value, class Key, class HashFcn,
+          class ExtractKey, class EqualKey, class Alloc>
+class hashtable {
+public:
+    // 对外公开的类型定义
+    typedef Key key_type;
+    typedef Value value_type;
+    typedef HashFcn hasher;
+    typedef EqualKey key_equal;
+    typedef size_t size_type;
+
+    // 内部使用的节点类型和桶数组类型
+    typedef __hashtable_node<Value> node;
+    typedef vector<node*, Alloc> bucket_type;      // 桶数组：每个元素是指向链表的指针
+    typedef __hashtable_iterator<Value, Key, HashFcn, ExtractKey, EqualKey, Alloc> iterator;
+
+private:
+    // 成员变量
+    hasher      hash;           // 哈希函数对象
+    key_equal   equals;         // 比较键是否相等的函数对象
+    ExtractKey  get_key;        // 从 Value 中提取 Key 的函数对象
+    bucket_type buckets;        // 桶数组，大小总是质数
+    size_type   num_elements;   // 当前哈希表中元素的总数
+
+    // ---------- 私有辅助函数 ----------
+    // 根据键和桶数量计算桶号（取模）
+    size_type bkt_num_key(const key_type& key, size_type n) const {
+        return hash(key) % n;
+    }
+    // 使用当前桶数组大小计算桶号
+    size_type bkt_num_key(const key_type& key) const {
+        return bkt_num_key(key, buckets.size());
+    }
+    // 根据值（通过 get_key 提取键）和桶数量计算桶号
+    size_type bkt_num(const value_type& obj, size_type n) const {
+        return bkt_num_key(get_key(obj), n);
+    }
+    // 使用当前桶数组大小计算桶号
+    size_type bkt_num(const value_type& obj) const {
+        return bkt_num(obj, buckets.size());
+    }
+
+    // 分配并构造一个新节点（使用空间配置器）
+    node* new_node(const value_type& obj) {
+        node* tmp = Alloc::allocate(sizeof(node));    // 分配原始内存
+        new (tmp) node;                               // placement new 构造节点对象（设置 next=0）
+        tmp->next = 0;
+        try {
+            construct(&tmp->val, obj);                // 构造节点中的值对象
+        } catch (...) {
+            Alloc::deallocate(tmp, sizeof(node));     // 异常安全：释放已分配内存
+            throw;
+        }
+        return tmp;
+    }
+
+    // 析构节点并释放内存
+    void delete_node(node* n) {
+        destroy(&n->val);          // 调用 value 的析构函数
+        Alloc::deallocate(n, sizeof(node));
+    }
+
+    // 重新散列（扩容）：将当前所有元素重新分配到更大的桶数组中
+    void rehash() {
+        // 1. 确定新桶数组大小：从质数表中找到第一个大于当前 buckets.size() 的质数
+        const size_type new_buckets_count = __stl_next_prime(buckets.size());
+        // 2. 创建新桶数组，所有桶指针初始化为 0
+        bucket_type new_buckets(new_buckets_count, (node*)0);
+        // 3. 遍历所有旧桶及其链表节点
+        for (size_type bucket = 0; bucket < buckets.size(); ++bucket) {
+            node* cur = buckets[bucket];
+            while (cur) {
+                node* next = cur->next;
+                // 重新计算当前节点在新桶数组中的桶号
+                size_type new_bucket = bkt_num(cur->val, new_buckets_count);
+                // 头插法：将节点插入到 new_buckets[new_bucket] 的头部
+                cur->next = new_buckets[new_bucket];
+                new_buckets[new_bucket] = cur;
+                cur = next;
+            }
+        }
+        // 4. 交换新旧桶数组（原数组自动析构）
+        buckets.swap(new_buckets);
+    }
+
+public:
+    // ---------- 构造与析构 ----------
+    // 构造函数：n 为期望的最小桶数（实际会取不小于 n 的质数）
+    hashtable(size_type n, const hasher& hf, const key_equal& eql)
+        : hash(hf), equals(eql), get_key(), num_elements(0) {
+        buckets.resize(__stl_next_prime(n));
+    }
+
+    // 析构函数：清空所有元素并释放桶数组内存
+    ~hashtable() {
+        clear();
+    }
+
+    // 清空所有元素
+    void clear() {
+        for (size_type i = 0; i < buckets.size(); ++i) {
+            node* cur = buckets[i];
+            while (cur) {
+                node* next = cur->next;
+                delete_node(cur);
+                cur = next;
+            }
+            buckets[i] = 0;   // 将桶指针置空
+        }
+        num_elements = 0;
+    }
+
+    // ---------- 基本容量操作 ----------
+    size_type size() const { return num_elements; }
+    bool empty() const { return num_elements == 0; }
+
+    // ---------- 迭代器 ----------
+    // 返回第一个非空桶的第一个节点迭代器
+    iterator begin() {
+        for (size_type i = 0; i < buckets.size(); ++i)
+            if (buckets[i])
+                return iterator(buckets[i], this);
+        return end();
+    }
+    // 返回尾后迭代器（cur == 0, ht == this）
+    iterator end() { return iterator(0, this); }
+
+    // ---------- 插入操作（不允许重复键）----------
+    // 对外接口：插入前检查是否需要扩容
+    pair<iterator, bool> insert_unique(const value_type& obj) {
+        resize(num_elements + 1);               // 若元素数+1 > 桶数则扩容
+        return insert_unique_noresize(obj);
+    }
+
+    // 实际插入（不进行扩容检查）
+    pair<iterator, bool> insert_unique_noresize(const value_type& obj) {
+        const size_type bucket = bkt_num(obj);   // 计算桶号
+        node* first = buckets[bucket];           // 该桶的链表头
+        // 遍历链表，检查是否已存在相等的键（通过 EqualKey 比较）
+        for (node* cur = first; cur; cur = cur->next)
+            if (equals(get_key(cur->val), get_key(obj)))
+                return pair<iterator, bool>(iterator(cur, this), false);
+        // 不存在，则创建新节点并头插
+        node* tmp = new_node(obj);
+        tmp->next = first;
+        buckets[bucket] = tmp;
+        ++num_elements;
+        return pair<iterator, bool>(iterator(tmp, this), true);
+    }
+
+    // ---------- 插入操作（允许重复键）----------
+    // 用于 hash_multiset / hash_multimap
+    iterator insert_equal(const value_type& obj) {
+        resize(num_elements + 1);
+        return insert_equal_noresize(obj);
+    }
+
+    iterator insert_equal_noresize(const value_type& obj) {
+        const size_type bucket = bkt_num(obj);
+        node* first = buckets[bucket];
+        node* tmp = new_node(obj);
+        // 头插法（不检查重复）
+        tmp->next = first;
+        buckets[bucket] = tmp;
+        ++num_elements;
+        return iterator(tmp, this);
+    }
+
+    // ---------- 查找操作 ----------
+    // 根据键查找，返回迭代器（指向第一个匹配的元素）
+    iterator find(const key_type& key) {
+        size_type bucket = bkt_num_key(key);
+        node* cur = buckets[bucket];
+        while (cur) {
+            if (equals(get_key(cur->val), key))
+                return iterator(cur, this);
+            cur = cur->next;
+        }
+        return end();
+    }
+
+    // ---------- 计数操作 ----------
+    // 返回与 key 相等的元素个数
+    size_type count(const key_type& key) const {
+        size_type bucket = bkt_num_key(key);
+        node* cur = buckets[bucket];
+        size_type result = 0;
+        while (cur) {
+            if (equals(get_key(cur->val), key))
+                ++result;
+            cur = cur->next;
+        }
+        return result;
+    }
+
+    // ---------- 删除操作 ----------
+    // 通过迭代器删除一个元素
+    void erase(iterator it) {
+        if (it.cur == 0) return;          // 空迭代器不做任何事
+        const size_type bucket = bkt_num(it.cur->val);
+        node* cur = buckets[bucket];
+        node* prev = 0;
+        while (cur) {
+            if (cur == it.cur) {
+                if (prev)
+                    prev->next = cur->next;
+                else
+                    buckets[bucket] = cur->next;
+                delete_node(cur);
+                --num_elements;
+                return;
+            }
+            prev = cur;
+            cur = cur->next;
+        }
+    }
+
+    // 删除所有键等于 key 的元素，返回删除数量
+    size_type erase(const key_type& key) {
+        size_type bucket = bkt_num_key(key);
+        node* cur = buckets[bucket];
+        node* prev = 0;
+        size_type erased = 0;
+        while (cur) {
+            if (equals(get_key(cur->val), key)) {
+                node* next = cur->next;
+                if (prev)
+                    prev->next = next;
+                else
+                    buckets[bucket] = next;
+                delete_node(cur);
+                ++erased;
+                cur = next;
+            } else {
+                prev = cur;
+                cur = cur->next;
+            }
+        }
+        num_elements -= erased;
+        return erased;
+    }
+
+    // ---------- 扩容控制 ----------
+    // 检查是否需要扩容（若 hint > 当前桶数则 rehash）
+    void resize(size_type num_elements_hint) {
+        if (num_elements_hint > buckets.size())
+            rehash();
+    }
+
+    // 交换两个哈希表的内容
+    void swap(hashtable& other) {
+        buckets.swap(other.buckets);
+        swap(num_elements, other.num_elements);
+        swap(hash, other.hash);
+        swap(equals, other.equals);
+    }
+};
+```
+
+# algorithm
+
+## iterator
+
+由于 iterator 是 algorithm 和 container 之间的桥梁, 不同的 container 的 iterator 行为可能会有差距，于是要使用 iterator_category 来辨别
+
+---
+
+关系图
+
+```
+        Input Iterator       Output Iterator
+              │                    │
+              └──────────┬─────────┘
+                         ▼
+                 Forward Iterator
+                         │
+                         ▼
+               Bidirectional Iterator
+                         │
+                         ▼
+               Random Access Iterator
+```
+
+
+迭代器标签
+
+```cpp
+struct input_iterator_tag { };
+struct output_iterator_tag { };
+struct forward_iterator_tag : public input_iterator_tag { };
+struct bidirectional_iterator_tag : public forward_iterator_tag { };
+struct random_access_iterator_tag : public bidirectional_iterator_tag { };
+```
+
+---
+
+容器与迭代器类型对应表
+
+| 容器 | 迭代器类型 |
+|------|-----------|
+| `vector` / `string` / `array` / `deque` | 随机访问迭代器 |
+| `list` / `set` / `map` / `multiset` / `multimap` | 双向迭代器 |
+| `forward_list` / `unordered_set` / `unordered_map` / `unordered_multiset` / `unordered_multimap` | 前向迭代器 |
+| `istream_iterator` | 输入迭代器 |
+| `ostream_iterator` | 输出迭代器 |
+
+概览
+
+| 迭代器类别 | 方向 | 读 | 写 | 多次遍历 | 随机访问 |
+|-----------|------|----|----|---------|---------|
+| 输入迭代器 | 单向 | ✅ | ❌ | ❌ | ❌ |
+| 输出迭代器 | 单向 | ❌ | ✅ | ❌ | ❌ |
+| 前向迭代器 | 单向 | ✅ | ✅ | ✅ | ❌ |
+| 双向迭代器 | 双向 | ✅ | ✅ | ✅ | ❌ |
+| 随机访问迭代器 | 任意 | ✅ | ✅ | ✅ | ✅ |
+
+算法通过 `std::iterator_traits<Iter>::iterator_category` 获取迭代器类型，从而选择最优实现（如 `std::distance` 对随机访问迭代器使用减法，否则逐次递增）。
+
+```cpp
+// 针对输入迭代器的 distance 实现（逐个计数）
+template<class InputIterator>
+inline iterator_traits<InputIterator>::difference_type
+    distance(InputIterator first, InputIterator last,
+    input_iterator_tag) {
+    iterator_traits<InputIterator>::difference_type n = 0;
+    while (first != last) {
+        ++first; ++n;
+    }
+    return n;
+}
+
+// 针对随机访问迭代器的 distance 实现（直接相减）
+template<class RandomAccessIterator>
+inline iterator_traits<RandomAccessIterator>::difference_type
+    distance(RandomAccessIterator first, RandomAccessIterator last,
+    random_access_iterator_tag) {
+    return last - first;
+}
+
+// 对外接口：根据迭代器类型标签分发到对应的重载版本
+template<class InputIterator>
+inline iterator_traits<InputIterator>::difference_type
+    distance(InputIterator first, InputIterator last) {
+    typedef typename
+        iterator_traits<InputIterator>::iterator_category category;
+    return distance(first, last, category());
+}
+```
+
+## 关于binary_search
+
+`binary_search`其实就是调用了`lower_bound`来进行检查，所以查找某个元素就直接使用`lower_bound`就好了, 而不是检查在不在里面然后再二分查找(感觉有点废话了)
+
+```cpp
+template <class ForwardIterator, class T>
+bool binary_search (ForwardIterator first,
+    ForwardIterator last,
+    const T& val)
+{
+    first = std::lower_bound(first, last, val);
+    return (first != last && !(val < *first));
+}
+```
+
+# functor
+
+## 介绍
+
+functor 相对于 lambda 函数而言，功能更强大一些
+
+仿函数是一个重载了 `operator()` 的类对象，可以像函数一样被调用.
+
+Lambda 表达式简化了仿函数的定义, Lambda 本质上是一个匿名仿函数，编译器会为它生成唯一的类类型。
+
+| 特性 | 普通函数 | 仿函数 |
+|------|---------|--------|
+| 状态 | 无状态（只能用静态/全局变量，不安全） | 可以有**成员变量**，存储状态 |
+| 内联 | 可能被内联，但函数指针不易内联 | 类模板实例化后更容易内联 |
+| 类型 | 不同类型的函数指针本质相同 | 每个仿函数有独立类型，便于编译期优化 |
+| 泛型 | 需要写多个重载或模板 | 配合模板，单一类适配多种类型 |
+| 效率 | 函数指针调用有间接开销 | 编译器可完全内联，零开销 |
+
+## STL 中的预定义仿函数
+
+STL 提供了许多现成的仿函数，定义在 `<functional>` 头文件中。
+
+算术运算
+
+| 仿函数 | 作用 |
+|--------|------|
+| `plus<T>` | `x + y` |
+| `minus<T>` | `x - y` |
+| `multiplies<T>` | `x * y` |
+| `divides<T>` | `x / y` |
+| `modulus<T>` | `x % y` |
+| `negate<T>` | `-x` |
+
+关系比较
+
+| 仿函数 | 作用 |
+|--------|------|
+| `equal_to<T>` | `x == y` |
+| `not_equal_to<T>` | `x != y` |
+| `greater<T>` | `x > y` |
+| `less<T>` | `x < y` |
+| `greater_equal<T>` | `x >= y` |
+| `less_equal<T>` | `x <= y` |
+
+逻辑运算
+
+| 仿函数 | 作用 |
+|--------|------|
+| `logical_and<T>` | `x && y` |
+| `logical_or<T>` | `x || y` |
+| `logical_not<T>` | `!x` |
+
+使用示例：
+
+```cpp
+#include <functional>
+#include <algorithm>
+#include <vector>
+
+int main() {
+    std::vector<int> v = {3,1,4,1,5};
+    // 使用 less 仿函数进行升序排序
+    std::sort(v.begin(), v.end(), std::less<int>());
+    // 等价于默认行为，也可以写成 std::greater<int>() 进行降序
+}
+```
+
+## 函数适配器
+
+在 C++11 之前，通过 `binder1st`、`binder2nd`、`not1`、`not2` 等适配器改造仿函数, ：
+
+```cpp
+#include <functional>
+#include <vector>
+#include <algorithm>
+
+int main() {
+    std::vector<int> v = {10, 20, 30, 40, 50};
+    // 绑定 less<int> 的第二参数为 30，形成“小于30”的一元谓词
+    auto bind = std::bind2nd(std::less<int>(), 30);
+    // 再取反 => 大于等于30
+    auto pred = std::not1(bind);
+    int cnt = std::count_if(v.begin(), v.end(), pred); // 3
+}
+```
+> [!NOTE]
+>
+> 上面这些适配器在 C++17 被舍弃了
+
+C++11 引入了 `std::bind` 和 lambda，更灵活，旧适配器逐渐被弃用。
+
+## 仿函数（Functor）的可适配（Adaptable）条件
+
+这一部分仅作为了解学习内容
+
+在 C++98/03 时代，STL 中的**函数适配器**（如 `bind1st`、`bind2nd`、`not1`、`not2`、`ptr_fun`、`mem_fun` 等）要求被操作的仿函数提供特定的**嵌套类型**（typedef），以便适配器能够推断参数类型和返回类型。满足这些条件的仿函数称为 **可适配的（Adaptable）**。
+
+### 可适配仿函数需要提供的类型成员
+
+| 类别 | 需要的嵌套类型 | 说明 |
+|------|---------------|------|
+| **一元仿函数** (Unary Functor) | `argument_type`<br>`result_type` | 参数类型<br>返回值类型 |
+| **二元仿函数** (Binary Functor) | `first_argument_type`<br>`second_argument_type`<br>`result_type` | 第一个参数类型<br>第二个参数类型<br>返回值类型 |
+
+### 辅助基类：`unary_function` 和 `binary_function`
+
+STL 提供了两个模板类，用于快速满足可适配条件：
+
+```cpp
+template <class Arg, class Result>
+struct unary_function {
+    typedef Arg argument_type;
+    typedef Result result_type;
+};
+
+template <class Arg1, class Arg2, class Result>
+struct binary_function {
+    typedef Arg1 first_argument_type;
+    typedef Arg2 second_argument_type;
+    typedef Result result_type;
+};
+```
+
+仿函数只需继承这些基类，即可自动获得所需的 typedef：
+
+```cpp
+// 可适配的一元仿函数
+struct IsEven : public std::unary_function<int, bool> {
+    bool operator()(int x) const { return x % 2 == 0; }
+};
+
+// 可适配的二元仿函数
+struct MyLess : public std::binary_function<int, int, bool> {
+    bool operator()(int a, int b) const { return a < b; }
+};
+```
+
+适配器内部需要知道仿函数的参数类型和返回值类型。例如 `not1` 接受一元谓词并返回其否定：
+
+```cpp
+template <class Predicate>
+class unary_negate {
+    Predicate pred;  // 仿函数
+public:
+    // 需要知道参数类型，以便重载 operator()
+    bool operator()(const typename Predicate::argument_type& x) const {
+        return !pred(x);
+    }
+};
+```
+
+如果没有 `argument_type` 这个嵌套类型，适配器无法声明参数类型。
+
+### 标准库提供的预定义仿函数已经是可适配的
+
+所有 STL 预定义的仿函数（如 `std::less<int>`、`std::plus<int>` 等）都继承自 `unary_function` 或 `binary_function`，因此可以直接用于适配器。
+
+### 现代 C++（C++11 起）的变化
+
+- **Lambda 表达式**：默认不是可适配的（没有嵌套类型），但 C++11 引入了 `std::function` 和 `std::bind`，它们不依赖嵌套类型。
+- **`std::bind`**：可以绑定任何可调用对象，不需要仿函数提供嵌套类型。
+- **弃用适配器**：`bind1st`、`bind2nd`、`not1`、`not2` 等在 C++11 中标记为**弃用**，C++17 中**正式移除**。
+- **新工具**：`std::not_fn`（C++17）替代 `not1`/`not2`，不要求嵌套类型。
+
+> [!note]
+>
+> `unary_function` 和 `binary_function` 已在 **C++17** 中移除。新代码不应依赖它们，应使用 lambda 或手动定义嵌套类型（如果确实需要适配旧接口）。
