@@ -1566,3 +1566,333 @@ public:
 > [!note]
 >
 > `unary_function` 和 `binary_function` 已在 **C++17** 中移除。新代码不应依赖它们，应使用 lambda 或手动定义嵌套类型（如果确实需要适配旧接口）。
+
+# other adapter
+
+## bind2nd/not1
+
+这里不做介绍了
+
+## reverse_iterator
+
+reverse_iterator是一种适配器
+
+```cpp
+template <class Iterator>
+class reverse_iterator {
+protected:
+    Iterator current;   // 底层迭代器
+public:
+    // 类型定义（与底层迭代器保持一致）
+    using iterator_category = typename Iterator::iterator_category;
+    using value_type = typename Iterator::value_type;
+    using difference_type = typename Iterator::difference_type;
+    using pointer = typename Iterator::pointer;
+    using reference = typename Iterator::reference;
+
+    // 构造函数
+    reverse_iterator() : current() {}
+    explicit reverse_iterator(Iterator x) : current(x) {}
+    
+    // 获取底层迭代器（重要！）
+    Iterator base() const { return current; }
+    
+    // 解引用：返回 *（current - 1）
+    reference operator*() const {
+        Iterator tmp = current;
+        --tmp;
+        return *tmp;
+    }
+    
+    // 前置 ++：变成 --current
+    reverse_iterator& operator++() {
+        --current;
+        return *this;
+    }
+    
+    // 后置 ++
+    reverse_iterator operator++(int) {
+        reverse_iterator tmp = *this;
+        --current;
+        return tmp;
+    }
+    
+    // 前置 --：变成 ++current
+    reverse_iterator& operator--() {
+        ++current;
+        return *this;
+    }
+    
+    // 其他运算符：+, -, +=, -=, [] 等（随机访问迭代器时）
+    // ...
+};
+```
+
+## ostream_iterator
+
+`std::ostream_iterator` 是一个**输出迭代器适配器**，它把对迭代器的赋值操作**转换为对输出流（如 `std::cout`、`std::ofstream`）的插入操作**（`<<`）。
+
+常用于将容器中的元素序列写入到输出流，配合 `std::copy` 等算法使用。
+
+### 基本定义
+
+头文件：`<iterator>`
+
+```cpp
+template< class T,
+          class CharT = char,
+          class Traits = std::char_traits<CharT> >
+class ostream_iterator;
+```
+
+- `T`：要写入的元素类型（如 `int`、`std::string`）
+- `CharT`：字符类型（默认 `char`）
+- `Traits`：字符特性（默认 `std::char_traits<char>`）
+
+### 构造函数
+
+```cpp
+// 只指定输出流（不写入分隔符）
+ostream_iterator(ostream_type& stream);
+
+// 指定输出流和分隔符（每次写入元素后自动添加）
+ostream_iterator(ostream_type& stream, const CharT* delimiter);
+```
+
+### 核心操作
+
+`ostream_iterator` 是**输出迭代器**，只支持以下操作：
+
+| 操作 | 说明 |
+|------|------|
+| `*it` | 返回迭代器自身（用于形成左值） |
+| `++it` / `it++` | 返回迭代器自身（无实际效果，仅为满足迭代器协议） |
+| `it = value` | **关键操作**：将 `value` 通过 `<<` 写入流，若指定了分隔符则还会写入分隔符 |
+
+**重要**：赋值操作 `=` 是实际执行输出的地方。
+
+### 使用示例
+
+#### 基本用法：向 `std::cout` 输出元素
+
+```cpp
+#include <iostream>
+#include <iterator>
+#include <vector>
+
+int main() {
+    std::vector<int> v = {1, 2, 3, 4, 5};
+
+    // 创建 ostream_iterator，写入 cout，元素间用空格分隔
+    std::ostream_iterator<int> out_it(std::cout, " ");
+
+    for (int x : v) {
+        *out_it = x;   // 等价于 std::cout << x << " ";
+        // 或 out_it = x;  因为 operator= 通常返回引用，但习惯上写 *out_it = x
+    }
+    // 输出：1 2 3 4 5 
+}
+```
+
+#### 配合 `std::copy` 算法（更常用）
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <iterator>
+#include <vector>
+
+int main() {
+    std::vector<int> v = {10, 20, 30, 40, 50};
+    // 将 v 的内容复制到输出流，元素间用 ", " 分隔
+    std::copy(v.begin(), v.end(),
+              std::ostream_iterator<int>(std::cout, ", "));
+    // 输出：10, 20, 30, 40, 50, 
+}
+```
+
+### 原理简析
+
+`std::ostream_iterator` 内部持有一个指向 `std::basic_ostream<CharT, Traits>` 的指针和一个分隔符字符串。其 `operator=` 实现大致如下：
+
+```cpp
+// 简化版实现
+template<typename T>
+class ostream_iterator {
+    std::ostream* os;
+    const char* delim;
+public:
+    ostream_iterator(std::ostream& s, const char* d) : os(&s), delim(d) {}
+    
+    // 解引用返回自身
+    ostream_iterator& operator*() { return *this; }
+    // 前置++返回自身
+    ostream_iterator& operator++() { return *this; }
+    // 后置++返回自身（通过临时对象）
+    ostream_iterator operator++(int) { return *this; }
+    
+    // 核心：赋值操作写出元素
+    ostream_iterator& operator=(const T& value) {
+        *os << value;          // 写入值
+        if (delim) *os << delim; // 写入分隔符
+        return *this;
+    }
+};
+```
+
+**注意**：`operator*` 和 `operator++` 不做任何实质性工作，只是为了让迭代器协议通过（算法会先解引用再赋值，如 `*out_it = value`）。
+
+## istream_iterator
+`std::istream_iterator` 是一个**输入迭代器适配器**，它把对迭代器的读取操作（`++` 和解引用 `*`）**转换为从输入流（如 `std::cin`、`std::ifstream`）读取元素**（使用 `>>` 操作符）。
+
+常与 `std::copy` 等算法配合，将流中的数据读入容器。
+
+
+### 基本定义
+
+头文件：`<iterator>`
+
+```cpp
+template< class T,
+          class CharT = char,
+          class Traits = std::char_traits<CharT>,
+          class Distance = std::ptrdiff_t >
+class istream_iterator;
+```
+
+- `T`：要读取的元素类型（必须支持 `operator>>`）
+- `CharT`：字符类型（默认 `char`）
+- `Traits`：字符特性
+- `Distance`：迭代器距离类型（默认 `ptrdiff_t`）
+
+### 构造函数
+
+```cpp
+// 默认构造函数：构造一个“流结束迭代器”（end-of-stream iterator）
+istream_iterator();
+
+// 绑定到指定输入流，准备从该流读取
+istream_iterator(istream_type& stream);
+```
+
+**关键**：
+- 当使用 `istream_iterator(stream)` 构造时，迭代器会**立即尝试读取第一个元素**（预读），后续 `++` 时再读下一个。
+- 默认构造的迭代器表示**流结束**，通常用作 `end()`。
+
+### 核心操作
+
+`istream_iterator` 是**输入迭代器**，支持：
+
+| 操作 | 说明 |
+|------|------|
+| `*it` | 返回当前已读取的元素的引用（不进行新的读取） |
+| `++it` | 丢弃当前元素，并从流中读取下一个元素，并存储到内部缓冲区 |
+| `it++` | 后置递增，返回旧迭代器副本 |
+| `it1 == it2` | 比较两个迭代器是否相等（通常一个有效，另一个是流结束迭代器） |
+| `it1 != it2` | 不等比较 |
+
+**注意**：输入迭代器是**单遍扫描**（只能递增一次，不能保存多个副本并独立遍历）。
+
+### 使用示例
+
+从 `std::cin` 读取整数直到结束
+
+```cpp
+#include <iostream>
+#include <iterator>
+#include <vector>
+
+int main() {
+    // 从标准输入读取 int，直到文件结束或类型不匹配
+    std::istream_iterator<int> in_it(std::cin);
+    std::istream_iterator<int> end_it;   // 默认构造，表示流结束
+
+    std::vector<int> vec;
+    while (in_it != end_it) {
+        vec.push_back(*in_it);
+        ++in_it;
+    }
+
+    // 输出读入的元素
+    for (int x : vec) std::cout << x << " ";
+}
+```
+
+配合 `std::copy` 将输入流读入容器
+
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <iterator>
+#include <vector>
+
+int main() {
+    std::istream_iterator<int> in_it(std::cin), end_it;
+    std::vector<int> vec;
+
+    // 将输入流中的所有整数复制到 vector 中
+    std::copy(in_it, end_it, std::back_inserter(vec));
+
+    // 或者直接用范围构造
+    std::vector<int> vec2(in_it, end_it);
+}
+```
+
+从文件读取
+
+```cpp
+#include <fstream>
+#include <iterator>
+#include <vector>
+
+int main() {
+    std::ifstream file("data.txt");
+    std::istream_iterator<int> file_it(file), end_it;
+    std::vector<int> data(file_it, end_it);  // 将文件所有整数读入 vector
+}
+```
+
+### 原理简析
+
+`std::istream_iterator` 内部持有一个指向 `std::basic_istream<CharT, Traits>` 的指针和一个内部缓冲区（存储一个 `T` 类型的值）。核心行为：
+
+- **构造时立即预读**：当用有效流构造时，它调用 `operator>>` 读取第一个元素并存入内部缓存；若读取失败（如遇到 EOF），迭代器状态变为“流结束”，与默认构造的 `end_it` 相等。
+- **解引用** `*it`：返回内部缓存中已读取元素的引用（如果迭代器有效）。
+- **前置递增** `++it`：
+  1. 若当前有效，则尝试读取下一个元素到内部缓存；
+  2. 若读取失败（EOF 或类型错误），则置为“流结束”状态；
+  3. 返回自身。
+- **相等比较**：两个迭代器相等当且仅当：
+  - 两者都是流结束迭代器；或
+  - 两者指向同一个流且内部状态一致（实际实现中通常简单判断是否都指向同一流且尚未结束）。
+
+简化版伪代码：
+
+```cpp
+template<typename T>
+class istream_iterator {
+    std::istream* stream;
+    T value;               // 已读取的值
+    bool eof;              // 是否已到达流尾
+
+    void read() {
+        if (stream && (*stream >> value)) eof = false;
+        else { eof = true; stream = nullptr; }
+    }
+public:
+    istream_iterator() : stream(nullptr), eof(true) {}
+    istream_iterator(std::istream& s) : stream(&s) { read(); }
+
+    const T& operator*() const { return value; }
+    const T* operator->() const { return &value; }
+
+    istream_iterator& operator++() {
+        read();
+        return *this;
+    }
+
+    bool operator==(const istream_iterator& other) const {
+        return (eof && other.eof) || (stream == other.stream && !eof && !other.eof);
+    }
+};
+```
