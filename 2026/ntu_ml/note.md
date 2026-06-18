@@ -467,3 +467,138 @@ AdaBound 的核心公式如下：
 - Fine-tuning
 - Normalization
 - Regularization
+
+# Week 3
+深度学习本质是在拟合一个函数。
+
+于是神经网络的设计可以成shallow，也可以是deep networks
+
+但是一个直观的思想就是deep networks 可以复用前面学习到的某些特征，从而比shallow的网络设计的参数量少得多
+
+And...
+- Deep networks outperforms shallow ones when the required functions are complex and regular.
+- Deep is exponentially better than shallow even when $v = x^2$ .
+
+## Spatial Transformer Layer
+Spatial Transformer Layer（空间变换器层）是深度学习网络中的一个可微模块，旨在让网络主动地、动态地对输入数据（图像或特征图）进行空间变换，例如平移、旋转、缩放或裁剪
+
+传统的卷积神经网络（CNN）通过卷积和池化操作具有一定的**局部平移不变性**，即能容忍目标在小范围内移动。
+
+然而，CNN本身并**不具备**尺度不变性（scaling invariant）和旋转不变性（rotation invariant）。例如，一个被旋转或缩放的物体，对CNN来说可能是完全不同的东西。
+
+image transformation 本质可以看作是原图片到目标图片的映射，具体来说是采样点的映射。
+
+![](img/spatial_transformer_layer.png)
+
+Spatial Transformer Layer由三个顺序执行的组件构成：
+
+1. **参数预测 (Localisation Net)**
+    *   它的任务是接收输入的特征图（U），并**预测出空间变换所需的参数（θ）(e.g 上图二维的a, b, c, d, e, f)**。
+    *   根据不同的输入内容，动态地生成最适合它的变换参数。
+2. **坐标映射 (Grid Generator)**
+    *   在输入特征图（U）上**计算出采样点的坐标网格**。
+3. **像素采集 (Sampler)**
+    *   这是最后一步，它根据第二步生成的坐标网格，**从输入特征图（U）中采集像素值，从而生成最终的输出特征图（V）**。
+    *   由于映射后的坐标通常是**小数**，无法直接对应到输入图上的整数像素点，因此这一步需要使用 **插值(interpolation)** （如双线性插值）来计算该位置的像素值。
+    *   使用插值的可以使得整个变换过程是**可微分的**, 这意味着损失函数的梯度可以反向传播，从而端到端地训练整个网络，包括用来预测变换参数的Localisation Net。
+
+下面是slide关于interpolation的介绍，作为补充
+
+![](img/interpolation.png)
+
+# Week 4
+
+## Self-Attention
+
+对于序列的数据输入，数据的顺序本身存在信息，我们需要另外的设计来学习这种信息
+
+Vectors sets as input 
+- One-hot Encoding(every vector do not have relationship with other vectors) 
+- Word Embedding
+
+then comes to self-attention
+
+Self-Attention
+\[
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+\]
+
+
+signle explaination as follow:
+- **点积**：计算 \( Q \times K^T \)。得到的是一个 \( N \times N \) 的矩阵（\( N \) 是序列长度）。里面的数值 \( (i, j) \) 代表“第 \( i \) 个词”对“第 \( j \) 个词”的原始关注强度（相似度）。
+- **缩放**：除以 \( \sqrt{d_k} \)。因为维度 \( d_k \) 很大时，点积数值会变得很大，导致 Softmax 落入梯度极小的区域，除以根号维度是为了把方差拉回 1。
+- **归一化** ：对 \( N \times N \) 矩阵的每一行做 Softmax。现在每一行的数值变成了概率，和为 1。这意味着：“对于当前的词 \( i \)，它把 100% 的注意力权重，按重要性分摊给了所有词（包括它自己）。”
+- **加权求和** ：将这个概率矩阵乘以 \( V \)。每个词的新向量，都融合了**全局所有词**的信息，且融合的比例由相关性决定。
+
+but might have problems:
+- **Position 盲区**：在计算步骤 1（\( Q \times K^T \)）时，只涉及向量的点积。点积是**交换律**的（\( a \cdot b = b \cdot a \)）。这意味着，如果“我”在第1位，“你”在第2位，和“你”在第1位，“我”在第2位，计算出来的 Attention 分数**一模一样**。
+- **结论**：Self-Attention 本身把输入当作**“无序的一袋水果”**。它只关心“苹果”和“梨”的语义特征是否匹配，**完全不关心“苹果是在梨的左边还是右边”**。这就是为什么 Transformer 必须在输入层 **强制加上（Add）位置编码**——位置编码是在给这袋水果强行贴上门牌号，否则 Self-Attention 根本无法区分“人咬狗”和“狗咬人”。
+
+code for learning the idea
+
+```python
+# x (batch, seq_len, dim)
+# x_pe = x + pe (pe stands for position encoding vector)
+
+Q = x_pe @ W_q
+K = x_pe @ W_k
+V = x_pe @ W_v
+
+# attn_weights shape : (batch, seq_len, seq_len)
+attn_weights = softmax(Q @ K.transpose(-2, -1) / sqrt(dk))
+
+# attn_weights 矩阵的第 i 行，只依赖于 Q_i 和所有 K_j
+```
+
+## Multi-head self-attention
+简单理解
+- **单头注意力**：只能整体地算出一个注意力权重。模型可能被迫折中，既关注“吃草”的动作，又关注“跳过”的动作，结果两件事都没关注透彻，变成“大杂烩”。
+- **多头注意力（8个头）**：
+  - **头 1（Head 1）**：专门盯着**邻近词**（“河边”紧挨着“吃草”），学习局部语法。
+  - **头 3（Head 3）**：专门盯着**远距离指代**（“鹿”和“它”虽然没有，但这里“鹿”和“跳过”跨了很远，照样抓取）。
+  - **头 7（Head 7）**：专门盯着**实体类型**（区分“动物”和“地理”）。
+最后，模型把 8 个专家的意见**汇总拼接**，得到一个信息极其丰富的向量。
+
+单头的公式：\( \text{Attention}(Q, K, V) = \text{softmax}(\frac{QK^T}{\sqrt{d_k}})V \)
+
+多头数学定义为：
+\[
+\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, \text{head}_2, ..., \text{head}_h)W^O
+\]
+\[
+\text{其中 } \text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)
+\]
+
+3 个投影矩阵 \( W_i^Q, W_i^K, W_i^V \)：
+
+- 假设词嵌入维度是 \( d_{model} = 512 \)。
+- 用 \( h = 8 \) 个头。
+- 每个头的维度 \( d_k = d_v = d_{model} / h = 512 / 8 = 64 \)。
+
+\( W_i^Q \) 的形状是 \( 512 \times 64 \)。这意味着，**每个头会把原始的 512 维向量，通过不同的投影矩阵，压缩映射到一个 64 维的“子空间”里**。因为 8 个头的投影矩阵 \( W_i \) 都是**随机初始化、独立训练**的，所以它们会从原始数据中**“提炼”出 8 种不同的特征角度**。
+
+
+code for learning the idea
+
+```python
+# 假设输入 x: (batch_size, seq_len, d_model=512)
+# 多头数: 8, 每个头维度: 64
+
+# 1. 线性变换并拆分为多组
+# W_q, W_k, W_v 形状均为 (512, 512)
+Q = x @ W_q  # (batch, seq_len, 512)
+# 关键：把最后一维拆成 (8, 64)，并交换维度
+Q = Q.view(batch_size, seq_len, 8, 64).transpose(1, 2)  
+# 现在 Q 的形状: (batch_size, 8, seq_len, 64)
+# 这就实现了 8 个头并行计算，互不干扰！
+
+# 2. 计算缩放点积注意力（此时在 64 维空间中算）
+# scores = (Q @ K.transpose(-2,-1)) / sqrt(64)
+# 得到 attn 形状: (batch, 8, seq_len, seq_len)
+
+# 3. 加权求和后，把 8 个头拼回去
+# 形状变回 (batch, seq_len, 512)
+# 4. 最后过一层输出投影 W_o (512, 512)
+```
+
+## RNN
