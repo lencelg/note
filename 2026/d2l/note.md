@@ -5,7 +5,7 @@ title: d2l book note
 [TOC]
 
 # Introduction
-介绍了ml的大致内容
+介绍了ml的大致内容, 不多赘述
 
 # Preliminary knowledge
 ## data operation
