@@ -2,6 +2,7 @@
 author: lencelg from Arcadia Bay
 title: d2l book note
 ---
+
 [TOC]
 
 # Introduction
@@ -9,16 +10,39 @@ title: d2l book note
 
 # Preliminary knowledge
 ## data operation
-`torch.numel()` ：获得张量中所有元素的个数
+### cat
+可以通过`cat`来拼接`tensor`, `dim=0`意味着**行（纵向）拼接**，`dim=1`意味着**列（横向）拼接**. 
 
----
+```python
+X = torch.arange(12, dtype=torch.float32).reshape((3,4))
+Y = torch.tensor([[2.0, 1, 4, 3], [1, 2, 3, 4], [4, 3, 2, 1]])
+torch.cat((X, Y), dim=0), torch.cat((X, Y), dim=1)
+```
+
+res as follow
+
+```console
+(tensor([[ 0.,  1.,  2.,  3.],
+         [ 4.,  5.,  6.,  7.],
+         [ 8.,  9., 10., 11.],
+         [ 2.,  1.,  4.,  3.],
+         [ 1.,  2.,  3.,  4.],
+         [ 4.,  3.,  2.,  1.]]),
+ tensor([[ 0.,  1.,  2.,  3.,  2.,  1.,  4.,  3.],
+         [ 4.,  5.,  6.,  7.,  1.,  2.,  3.,  4.],
+         [ 8.,  9., 10., 11.,  4.,  3.,  2.,  1.]]))
+```
+
+## Broadcasting Mechanism
 
 **广播机制**（Broadcasting Mechanism）。当两个张量形状不同时，广播机制通过以下两步实现按元素操作：
+
+PyTorch 广播的核心机制是通过将“1”维度的步长设为 0 实现虚拟扩展（零拷贝），**并在反向传播时通过求和规约叠加梯度**
 
 1. **扩展**：将其中一个或两个张量沿着长度为 1 的轴复制元素，使二者形状一致。
 2. **运算**：对扩展后的数组执行按元素操作。
 
-示例中，张量 `a` 形状为 `(3, 1)`，张量 `b` 形状为 `(1, 2)`。通过广播：
+张量 `a` 形状为 `(3, 1)`，张量 `b` 形状为 `(1, 2)`。通过广播：
 - `a` 的列被复制，变为 `(3, 2)`
 - `b` 的行被复制，变为 `(3, 2)`
 
@@ -30,13 +54,71 @@ title: d2l book note
  [2, 3]]
 ```
 
+
+###  other
+
+`torch.numel()` ：获得张量中所有元素的个数
+
+## deal with missing values
+
+```python
+print(data)
+```
+
+```console
+   NumRooms Alley   Price
+0       NaN  Pave  127500
+1       2.0   NaN  106000
+2       4.0   NaN  178100
+3       NaN   NaN  140000
+```
+
+use `fillna` to fill NaN
+
+```python
+inputs, outputs = data.iloc[:, 0:2], data.iloc[:, 2]
+inputs = inputs.fillna(inputs.mean())
+print(inputs)
+```
+
+```console
+   NumRooms Alley
+0       3.0  Pave
+1       2.0   NaN
+2       4.0   NaN
+3       3.0   NaN
+```
+
+use `get_dummies` (one kind of one-hot encoding)
+
+> [**对于`inputs`中的类别值或离散值，我们将“NaN”视为一个类别。**]
+> 由于“巷子类型”（“Alley”）列只接受两种类型的类别值“Pave”和“NaN”，
+> `pandas`可以自动将此列转换为两列“Alley_Pave”和“Alley_nan”。
+> 巷子类型为“Pave”的行会将“Alley_Pave”的值设置为1，“Alley_nan”的值设置为0。
+> 缺少巷子类型的行会将“Alley_Pave”和“Alley_nan”分别设置为0和1。
+
+```python
+inputs = pd.get_dummies(inputs, dummy_na=True)
+print(inputs)
+```
+
+```console
+   NumRooms  Alley_Pave  Alley_nan
+0       3.0           1          0
+1       2.0           0          1
+2       4.0           0          1
+3       3.0           0          1
+```
+
 ## math
 向量是一阶张量，矩阵是二阶张量。张量是描述具有任意数量轴的 $n$ 维张量。
 
----
+***对称矩阵*（symmetric matrix）$\mathbf{A}$等于其转置：$\mathbf{A} = \mathbf{A}^\top$**
 
 **两个矩阵的按元素乘法称为*Hadamard积*（Hadamard product）（数学符号$\odot$）**
+
 矩阵$\mathbf{A}$ 和$\mathbf{B}$ 的Hadamard积为：
+
 $$
 \mathbf{A} \odot \mathbf{B} =
 \begin{bmatrix}
@@ -47,9 +129,52 @@ $$
 \end{bmatrix}.
 $$
 
----
+### sum
 
-如果我们想沿某个轴计算A元素的累积总和， 比如axis=0（按行计算），可以调用cumsum函数。 此函数不会沿任何轴降低输入张量的维度。
+```python
+A
+```
+
+```console
+tensor([[ 0.,  1.,  2.,  3.],
+        [ 4.,  5.,  6.,  7.],
+        [ 8.,  9., 10., 11.],
+        [12., 13., 14., 15.],
+        [16., 17., 18., 19.]])
+```
+
+`axis=0`可以使输入矩阵沿0轴降维以生成输出向量，因此输入轴0的维数在输出形状中消失
+
+如果不想降维，可以使用`keepdim=True`的参数
+
+```python
+A_sum_axis0 = A.sum(axis=0)
+A_sum_axis0, A_sum_axis0.shape
+```
+
+```console
+(tensor([40., 45., 50., 55.]), torch.Size([4]))
+```
+
+类比就可以知道`axis=1`含义了
+
+同样的，如果不想降维，可以使用`keepdim=True`的参数
+
+```python
+A_sum_axis1 = A.sum(axis=1)
+A_sum_axis1, A_sum_axis1.shape
+```
+
+```console
+(tensor([ 6., 22., 38., 54., 70.]), torch.Size([5]))
+```
+
+### cumsum
+
+如果想沿某个轴计算A元素的累积总和， 比如axis=0（按行计算），可以调用cumsum函数, 这不会沿任何轴降低输入张量的维度。
+
+这里的方向和`sum()`的方向不一样，要区分清楚
+
 ```python
 >>> a = torch.randint(1, 20, (10,))
 >>> a
@@ -58,35 +183,55 @@ tensor([13,  7,  3, 10, 13,  3, 15, 10,  9, 10])
 tensor([13, 20, 23, 33, 46, 49, 64, 74, 83, 93])
 ```
 
----
+### norm
+$L_2$范数和$L_1$范数都是更一般的$L_p$范数的特例：
 
-梯度
+$$\|\mathbf{x}\|_p = \left(\sum_{i=1}^n \left|x_i \right|^p \right)^{1/p}.$$
 
-我们可以连结一个多元函数对其所有变量的偏导数，以得到该函数的*梯度*（gradient）向量。
-具体而言，设函数$f:\mathbb{R}^n\rightarrow\mathbb{R}$的输入是
-一个$n$维向量$\mathbf{x}=[x_1,x_2,\ldots,x_n]^\top$，并且输出是一个标量。
+类似于向量的$L_2$范数，$\mathbf{X} \in \mathbb{R}^{m \times n}$(**的*Frobenius范数*（Frobenius norm）是矩阵元素平方和的平方根**
+
+**$$\|\mathbf{X}\|_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n x_{ij}^2}.$$**
+
+Frobenius范数满足向量范数的所有性质，它就像是矩阵形向量的$L_2$范数。可以使用`torch.norm()`来计算
+
+类似的函数是`torch.linalg.norm`
+
+torch.linalg.norm 默认计算所有元素的 Frobenius 范数
+- `ord` 参数：可以指定不同类型的范数（如 ord=1 为列和范数，ord=2 为谱范数等）。
+- `dim` 参数：可以指定沿特定轴计算范数
+
+e.g
+
+```python
+# X.shape == (2, 3, 4)
+torch.linalg.norm(X, dim=0)  # 沿 axis=0 计算，输出形状 (3,4)
+torch.linalg.norm(X, dim=(1,2))  # 沿 axis=1 和 2 计算，输出形状 (2,)
+```
+
+## gradient
+
+通过连结一个多元函数对其所有变量的偏导数可以得到该函数的*梯度*（gradient）向量。
+
+设函数$f:\mathbb{R}^n\rightarrow\mathbb{R}$的输入是一个$n$维向量$\mathbf{x}=[x_1,x_2,\ldots,x_n]^\top$，并且输出是一个标量。
+
 函数$f(\mathbf{x})$相对于$\mathbf{x}$的梯度是一个包含$n$个偏导数的向量:
 
 $$\nabla_{\mathbf{x}} f(\mathbf{x}) = \bigg[\frac{\partial f(\mathbf{x})}{\partial x_1}, \frac{\partial f(\mathbf{x})}{\partial x_2}, \ldots, \frac{\partial f(\mathbf{x})}{\partial x_n}\bigg]^\top,$$
 
 其中$\nabla_{\mathbf{x}} f(\mathbf{x})$通常在没有歧义时被$\nabla f(\mathbf{x})$取代。
 
-假设$\mathbf{x}$为$n$维向量，在微分多元函数时经常使用以下规则:
+假设$\mathbf{x}$为$n$维向量，经常使用的有以下规则:
 
 * 对于所有$\mathbf{A} \in \mathbb{R}^{m \times n}$，都有$\nabla_{\mathbf{x}} \mathbf{A} \mathbf{x} = \mathbf{A}^\top$
 * 对于所有$\mathbf{A} \in \mathbb{R}^{n \times m}$，都有$\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A}  = \mathbf{A}$
 * 对于所有$\mathbf{A} \in \mathbb{R}^{n \times n}$，都有$\nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{A} \mathbf{x}  = (\mathbf{A} + \mathbf{A}^\top)\mathbf{x}$
 * $\nabla_{\mathbf{x}} \|\mathbf{x} \|^2 = \nabla_{\mathbf{x}} \mathbf{x}^\top \mathbf{x} = 2\mathbf{x}$
 
-同样，对于任何矩阵$\mathbf{X}$，都有$\nabla_{\mathbf{X}} \|\mathbf{X} \|_F^2 = 2\mathbf{X}$。
+对于任何矩阵$\mathbf{X}$，都有$\nabla_{\mathbf{X}} \|\mathbf{X} \|_F^2 = 2\mathbf{X}$。
 
-梯度对于设计深度学习中的优化算法有很大用处。
+## computational graph
 
----
-
-实际中，根据我们设计的模型，系统会构建一个计算图（computational graph）， 来跟踪计算是哪些数据通过哪些操作组合起来产生输出。 自动微分使系统能够随后反向传播梯度
-
-这里，反向传播（backpropagate）意味着跟踪整个计算图，填充关于每个参数的偏导数。
+系统会构建一个计算图（computational graph）， 来跟踪计算是哪些数据通过哪些操作组合起来产生输出。自动微分使系统能够随后反向传播梯度.
 - `tensor1.requires_grad_(True)`：告诉框架需要对<u>**该张量**</u>求导
 - `tensor2.backward()`：求 tensor2 对 tensor1 导数（tensor2 需为 tensor1 的表达式，且求导前要执行`requires_grad_(True)`命令）
 - `tensor1.grad`：访问求导后张量的导数
@@ -95,7 +240,38 @@ $$\nabla_{\mathbf{x}} f(\mathbf{x}) = \bigg[\frac{\partial f(\mathbf{x})}{\parti
 - 一般很少用到向量对向量（以及更高阶）的求导，需要引入一个 gradient 参数，所以会把一个向量转化为标量求导，最常用的就是求和：`tensor.sum().backward()`。`loss`一般是一个标量，如果 loss 是矩阵，维度就会越算越大。
 - 可以经过 Python 计算流再求导。
 
+
+### add-on
+
+**非标量变量的反向传播**
+
+`y = x * x`（`x = [0, 1, 2, 3]`）。
+
+**写法一（显式传入 gradient）：**
+```python
+y.backward(torch.ones(len(x))) 
+```
+这相当于令向量 \( v = [1, 1, 1, 1]^T \)。
+
+**写法二（`sum` 技巧）：**
+```python
+y.sum().backward()
+```
+- `y.sum()` 是一个**标量**，即 \( y_1 + y_2 + y_3 + y_4 \)。
+- 这个标量对 `x` 求导，就是 \( \frac{\partial (y_1 + y_2 + y_3 + y_4)}{\partial x} \)。
+- 由于线性加法的导数等于导数的和，这等价于对雅可比矩阵的**每一列求和**。
+
+对雅可比矩阵的每一列求和，恰好等同于 **雅可比矩阵左乘全 1 向量**（即 \( \mathbf{1}^T \cdot J \)）。所以：
+> **`y.sum().backward()` 等价于 `y.backward(torch.ones_like(y))`**
+
+手动算一下：
+- 原函数：\( y_i = x_i^2 \)
+- 雅可比矩阵 \( J \) 是一个对角矩阵，对角线上的元素是 \( \frac{dy_i}{dx_i} = 2x_i \)。
+- 当我们传入全 1 向量 `v` 时，\( v^T \cdot J = [1, 1, 1, 1] \times diag(2x_i) = [2x_1, 2x_2, 2x_3, 2x_4] \)。
+- 代入 `x = [0, 1, 2, 3]`，就是 `[0, 2, 4, 6]`。
+
 # Linear Neural network
+
 线性回归是一个很简单的优化问题。线性回归的解可以用一个公式简单地表达出来， 这类解叫作解析解（analytical solution）。
 
 **线性回归的最小二乘解**（Normal Equation）：
@@ -110,8 +286,6 @@ w^* = (X^T X)^{-1} X^T y
 - \(w^*\) 是最优权重参数向量
 
 该公式要求 \(X^T X\) 可逆（即特征之间线性无关）。
-
----
 
 SGD
 
