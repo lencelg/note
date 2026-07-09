@@ -4,4 +4,4 @@ Useless repo
 
 new note is written in typst
 
-PS: if you are student who majored in artifical intelligence from jinan university(暨南大学), i have some notes for reviewing courses in this repo(written in typst, printable, but might not so helpful for exams)
+PS: if you are student who majored in artifical intelligence in jinan university(暨南大学), i have some notes for reviewing courses in this repo(written in typst, printable, but might not so helpful for exams)
