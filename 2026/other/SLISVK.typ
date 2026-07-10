@@ -53,7 +53,8 @@ hello, ruby
 => nil
 ````
 
-#pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()pagebreak()
+#pagebreak()
+
 == hash table
 符号是前面带有冒号的标识符，类似于#text(fill: blue)[`:symbol`]的形式。它在给事物和概念命名时非常好用
 
