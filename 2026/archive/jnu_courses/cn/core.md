@@ -1,7 +1,7 @@
 ---
 ebook:
     title: cn core review note
-    author: lencelg from Arcadai Bay
+    author: lencelg from Arcadia Bay
 ---
 - [计算机网络核心考点笔记](#计算机网络核心考点笔记)
 - [一、网络性能指标](#一网络性能指标)

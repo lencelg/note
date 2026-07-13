@@ -5,7 +5,7 @@
 
 #show: ori.with(
   title: "计算机网络考点笔记",
-  author: "lencelg from Arcadai Bay",
+  author: "lencelg from Arcadia Bay",
   semester: "2026 summer",
   date: datetime.today(),
   maketitle: true,
