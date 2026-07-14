@@ -360,6 +360,7 @@ Erlang可以做一些基本类型强制转换。
 其他跳过阅读(兴趣一般)
 
 = Haskell
+
 函数是整个Haskell编程范型的核心。
 
 ````haskell
@@ -370,4 +371,23 @@ ghci> fact 3
 6
 ghci> fact 50
 30414093201713378043612608166064768844377641568960512000000000000
+````
+
+or write it in a seperate file `factorial.hs`
+
+````haskell
+moudle Main
+  factorial :: Integer -> Integer
+  factorial 0 = 1
+  factorial x = x * factorial(x - 1)
+````
+
+也可以使用哨兵表达式
+
+````haskell
+moudle Main
+  factorial :: Integer -> Integer
+  factorial x 
+    | x > 1 = x * factorial(x - 1)
+    | otherwise = 1
 ````
