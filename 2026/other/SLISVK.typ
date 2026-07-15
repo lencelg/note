@@ -361,6 +361,7 @@ Erlang可以做一些基本类型强制转换。
 
 = Haskell
 
+== Basic
 函数是整个Haskell编程范型的核心。
 
 ````haskell
@@ -391,3 +392,75 @@ moudle Main
     | x > 1 = x * factorial(x - 1)
     | otherwise = 1
 ````
+
+== 斐波那契数列
+
+recursive version
+
+````haskell
+moudle Main where
+  fib :: Integer -> Integer
+  fib 0 = 1
+  fib 1 = 1
+  fib x = fib(x - 1) + fib(x - 2)
+````
+=== 元组
+
+````haskell
+module Main where
+  fibTuple :: (Integer, Integer, Integer) -> (Integer, Integer, Integer)
+  fibTuple (x, y, 0) = (x, y, 0)
+  fibTuple (x, y, index) = fibTuple (y, x + y, index - 1)
+
+  fibResult :: (Integer, Integer, Integer) -> Integer
+  fibResult (x, y, z) = x
+
+  fib :: Integer -> Integer
+  fib x = fibResult (fibTuple (0, 1, x))
+````
+
+== 元组和组合
+
+#text(fill: blue)[`fst`] 是 Haskell 标准库中的内置函数: 提取一个二元组中的第一个元素。
+
+````haskell
+module Main where
+  fibNextPair :: (Integer, Integer) -> (Integer, Integer)
+  fibNextPair (x, y) = (y, x + y)
+
+  fibNthPair :: Integer -> (Integer, Integer)
+  fibNthPair 1 = (1, 1)
+  fibNthPair n = fibNextPair (fibNthPair (n - 1))
+
+  fib :: Integer -> Integer
+  fib = fst . fibNthPair
+````
+
+== list
+
+#text(fill: blue)[head | tail 结构]
+
+````hs
+ghci> let (h : t) = [1, 2 ,3 ,4]
+ghci> h
+1
+ghci> t
+[2,3,4]
+````
+
+== 偏应用函数和柯里化
+
+偏应用将拥有多个参数的函数拆分为多个只有一个参数的函数。
+
+````hs
+ghci> let prod x y = x * y
+ghci> prod 2 4
+8
+ghci> :t prod
+prod :: Num a => a -> a -> a
+````
+*谜底揭晓: 当Haskell计算`prod 2 4`时，它实际上计算`(prod 2) 4`，像下面这样。*
+- 首先，应用`prod 2`。这将返回函数`(\y -> 2 * y)`。  
+- 然后，应用`(\y -> 2 * y) 4`或`2 * 4`，结果为8。
+
+其他的不多做介绍了，算是浅读+略读了这一本书
