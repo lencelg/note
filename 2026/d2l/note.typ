@@ -12,6 +12,7 @@
 
 #outline()
 
+#set text(size: 10pt)
 #show raw: set text(font: "Hack Nerd Font")
 
 #pagebreak()
@@ -317,4 +318,614 @@ $
 
 $
 partial_(o_j) l(y, hat(y))
-&= frac(exp(o_j) , sum_(k=1)^q exp(o_k) ) minus  y_j eq "softmax"(o)_j - y_j. $
+&= frac(exp(o_j) , sum_(k=1)^q exp(o_k) ) minus  y_j eq "softmax"(o)_j - y_j. 
+$
+
+=== implement from scratch
+*实现softmax*由三个步骤组成：
+
+1. 对每个项求幂（使用`exp`）；
+2. 对每一行求和（小批量中每个样本是一行），得到每个样本的规范化常数；
+3. 将每一行除以其规范化常数，确保结果的和为1。
+
+表达式如下：
+
+$
+"softmax"(upright(X))_"ij" eq frac(exp(upright(X))_"ij", sum_k exp(upright(X))_"ik")
+$
+
+代码如下：
+
+````python
+def softmax(X):
+  X_exp = torch.exp(X)
+  partition = X_exp.sum(1, keepdim=True)
+  return X_exp / partition
+````  
+
+#problem[
+代码实现有点草率。 矩阵中的非常大或非常小的元素可能造成数值上溢或下溢，但没有采取措施来防止这点。
+]
+
+交叉熵采用真实标签的负对数似然， $L eq minus log(P_"true")$
+
+````python
+def cross_entropy(y_hat, y):
+    return - torch.log(y_hat[range(len(y_hat)), y])
+````
+
+=== concise implementation
+
+记得前文的数值上溢和下溢问题
+
+#tip-block([
+  在 softmax 计算之前，先从所有 $o_k$ 中减去 $max(o_k)$, 看到每个 $o_k$ 按常数进行的移动不会改变 softmax 的返回值: 
+
+$
+hat(y)_j &= frac(exp(o_j - max(o_k)) exp(max(o_k)), sum_k exp(o_k - max(o_k)) exp(max(o_k)))\
+&= frac(exp(o_j - max(o_k)), sum_k exp(o_k - max(o_k))).
+$
+])
+
+然后再进行推导
+
+$
+log(hat(y)_j) &= log( frac(exp(o_j - max(o_k)), sum_k exp(o_k - max(o_k))) )\
+&= log( exp(o_j - max(o_k)) ) - log( sum_k exp(o_k - max(o_k)) )\
+&= o_j - max(o_k) - log( sum_k exp(o_k - max(o_k)) ).
+$
+
+于是可以避免计算$exp(O_j minus max(O_k))$可能出现的数值下溢问题
+
+= mlp
+
+深度学习基础的概念，不多做介绍
+
+= deep-learning-computation
+
+== block
+first is the template to use the pytorch to define our own block
+
+tow main part
+- inherit from `nn.Moudle` and define the `__init__` function
+- define the `forward` function
+
+````python
+class MLP(nn.Module):
+    def __init__(self):
+        # 调用MLP的父类Module的构造函数来执行必要的初始化。
+        super().__init__()
+        self.hidden = nn.Linear(20, 256)
+        self.out = nn.Linear(256, 10)
+
+    # 定义模型的前向传播
+    def forward(self, X):
+        return self.out(F.relu(self.hidden(X)))
+````
+
+parameters can be accessed by calling the `state_dict()` function
+
+````python
+net = nn.Sequential(nn.Linear(4, 8), nn.ReLU(), nn.Linear(8, 1))
+print(net[2].state_dict())
+````
+
+output as following
+
+````console
+OrderedDict([('weight', tensor([[ 0.3016, -0.1901, -0.1991, -0.1220,  0.1121, -0.1424, -0.3060,  0.3400]])), ('bias', tensor([-0.0291]))])
+````
+
+other ways to do so
+- `.bias`, `.bias.data`, `.weight`, `.weight.grad`, `.name_parameters()`
+
+== save and load
+
+for each tensor, we can use `load` and `save` to read and write them
+
+````python
+x = torch.range(4)
+torch.save(x, 'x-file')
+x2 = torch.load('x-file')
+````
+
+so we can do it for the model parameters too
+
+````python
+# define a net model somewhere before
+torch.save(net.state_dict(), 'mlp.params')
+clone.load_state_dict(torch.load('mlp.params'))
+````
+
+== use gpu
+
+so the most common gpu in used is nvidia\(but, nvidia, f\*\*k you)
+
+we can check it with commandline
+
+````console
+nvidia-smi
+````
+
+#note-block([
+  在PyTorch中，CPU和GPU可以用`torch.device('cpu')`
+和`torch.device('cuda')`表示。
+`cpu`设备意味着PyTorch的计算将尝试使用所有CPU核心。
+`gpu`设备只代表一个卡和相应的显存。
+如果有多个GPU，使用`torch.device(f'cuda:{i}')`
+来表示第$i$块GPU（$i$从0开始）,
+`cuda:0`和`cuda`是等价的。
+])
+
+we can use `torch.cuda.device_count()` to query how many gpu we have, use `.device` to check the device that it use
+
+````python
+x = torch.tensor([1, 2, 3])
+x.device
+````
+
+can define some function to easily specific the device
+ 
+````python
+def try_gpu(i=0):
+    """如果存在，则返回gpu(i)，否则返回cpu()"""
+    if torch.cuda.device_count() >= i + 1:
+        return torch.device(f'cuda:{i}')
+    return torch.device('cpu')
+
+def try_all_gpus():
+    """返回所有可用的GPU，如果没有GPU，则返回[cpu(),]"""
+    devices = [torch.device(f'cuda:{i}')
+             for i in range(torch.cuda.device_count())]
+    return devices if devices else [torch.device('cpu')]
+````
+
+and use it
+
+````python
+X = torch.ones(2, 3, device=try_gpu())
+net = nn.Sequential(nn.Linear(3, 1))
+net = net.to(device=try_gpu())
+````
+
+#pagebreak()
+
+= convolutional nn
+
+== why conv
+
+basic idea
+
+1. *平移不变性*（translation invariance）：不管检测对象出现在图像中的哪个位置，神经网络的前面几层应该对相同的图像区域具有相似的反应。
+2. *局部性*（locality）：神经网络的前面几层应该只探索输入图像中的局部区域，而不过度在意图像中相隔较远区域的关系。最后可以聚合这些局部特征，以在整个图像级别进行预测。
+
+多层感知机的在图像处理的限制
+- 参数爆炸，忽略先验知识，固定输入的尺寸，优化困难
+
+== conv layer
+严格来说，卷积层是个错误的叫法，因为它所表达的运算其实是*互相关运算*（cross-correlation），而不是卷积运算。
+
+#grid(
+  columns: (1.8fr, 2fr),
+  [
+    #image("img/cross-corrlation.png")
+  ],
+  [
+    \
+$
+0 times 0+1 times 1+3 times 2+4 times 3=19,\
+1 times 0+2 times 1+4 times 2+5 times 3=25,\
+3 times 0+4 times 1+6 times 2+7 times 3=37,\
+4 times 0+5 times 1+7 times 2+8 times 3=43.
+$
+  ]
+)
+
+输入大小为$n_h times n_w$, 卷积核大小$k_h times k_w$，输出大小为输入大小减去卷积核大小:
+
+$ (n_h-k_h+1) times (n_w-k_w+1). $
+
+so we can define a corr2d function to operate it
+
+````python
+def corr2d(X, K):
+    """计算二维互相关运算"""
+    h, w = K.shape
+    Y = torch.zeros((X.shape[0] - h + 1, X.shape[1] - w + 1))
+    for i in range(Y.shape[0]):
+        for j in range(Y.shape[1]):
+            Y[i, j] = (X[i:i + h, j:j + w] * K).sum()
+    return Y
+````
+
+== learning convolutional kernal
+
+可以通过“输入-输出”对来学习由`X`生成`Y`的卷积核而无需手工设置
+
+````python
+# 二维卷积层，有1个输出通道和形状为（1，2）的卷积核
+conv2d = nn.Conv2d(1,1, kernel_size=(1, 2), bias=False)
+
+# 四维输入和输出格式（批量大小、通道、高度、宽度），批量大小和通道数都为1
+X = X.reshape((1, 1, 6, 8))
+Y = Y.reshape((1, 1, 6, 7))
+lr = 3e-2
+
+for i in range(10):
+    Y_hat = conv2d(X)
+    l = (Y_hat - Y) ** 2
+    conv2d.zero_grad()
+    l.sum().backward()
+    # 迭代卷积核
+    conv2d.weight.data[:] -= lr * conv2d.weight.grad
+    if (i + 1) % 2 == 0:
+        print(f'epoch {i+1}, loss {l.sum():.3f}')
+````
+
+output as follow
+
+````console
+epoch 2, loss 4.149
+epoch 4, loss 1.216
+epoch 6, loss 0.417
+epoch 8, loss 0.157
+epoch 10, loss 0.062
+````
+
+== pooling
+
+我们处理图像时，我们希望逐渐降低隐藏表示的空间分辨率、聚集信息，这样随着我们在神经网络中层叠的上升，每个神经元对其敏感的感受野（输入）就越大。
+
+pooling可以降低卷积层对位置的敏感性，同时降低对空间降采样表示的敏感性。
+
+max pooling as follow, average pooling is just take the average of the numbers
+#figure(
+grid(
+  columns: (1.2fr, 2fr),
+  [
+    #image("img/max_pooling.png", width: 112%)
+  ],
+  [
+    \
+$
+max(0, 1, 3, 4)=4,\
+max(1, 2, 4, 5)=5,\
+max(3, 4, 6, 7)=7,\
+max(4, 5, 7, 8)=8.\
+$
+  ]
+),
+caption: [max pooling]
+)
+
+stride, padding不多做介绍了
+
+== LeNet-5
+
+LeNet-5是经典的卷积网络设计
+
+#figure(
+  image("img/lenet-5.png"),
+  caption: [leNet-5]
+)
+
+可以在torch上轻松定义
+
+````python
+net = nn.Sequential(
+    nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Conv2d(6, 16, kernel_size=5), nn.Sigmoid(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Flatten(),
+    nn.Linear(16 * 5 * 5, 120), nn.Sigmoid(),
+    nn.Linear(120, 84), nn.Sigmoid(),
+    nn.Linear(84, 10))
+````
+
+d2l train code, worth to understand
+
+````python
+def train_ch6(net, train_iter, test_iter, num_epochs, lr, device):
+    """用GPU训练模型"""
+    def init_weights(m):
+        if type(m) == nn.Linear or type(m) == nn.Conv2d:
+            nn.init.xavier_uniform_(m.weight)
+    net.apply(init_weights)
+    print('training on', device)
+    net.to(device)
+    optimizer = torch.optim.SGD(net.parameters(), lr=lr)
+    loss = nn.CrossEntropyLoss()
+    animator = d2l.Animator(xlabel='epoch', xlim=[1, num_epochs],
+                            legend=['train loss', 'train acc', 'test acc'])
+    timer, num_batches = d2l.Timer(), len(train_iter)
+    for epoch in range(num_epochs):
+        # 训练损失之和，训练准确率之和，样本数
+        metric = d2l.Accumulator(3)
+        net.train()
+        for i, (X, y) in enumerate(train_iter):
+            timer.start()
+            optimizer.zero_grad()
+            X, y = X.to(device), y.to(device)
+            y_hat = net(X)
+            l = loss(y_hat, y)
+            l.backward()
+            optimizer.step()
+            with torch.no_grad():
+                metric.add(l * X.shape[0], d2l.accuracy(y_hat, y), X.shape[0])
+            timer.stop()
+            train_l = metric[0] / metric[2]
+            train_acc = metric[1] / metric[2]
+            if (i + 1) % (num_batches // 5) == 0 or i == num_batches - 1:
+                animator.add(epoch + (i + 1) / num_batches,
+                             (train_l, train_acc, None))
+        test_acc = evaluate_accuracy_gpu(net, test_iter)
+        animator.add(epoch + 1, (None, None, test_acc))
+    print(f'loss {train_l:.3f}, train acc {train_acc:.3f}, '
+          f'test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
+          f'on {str(device)}')
+
+lr, num_epochs = 0.9, 10
+train_ch6(net, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
+````
+
+#pagebreak()
+
+= modern cnn
+
+modern cnn专注在大型数据集上，是深度卷积神经网络
+
+== AlexNet
+
+#grid(
+  columns: (2fr, 1.9fr),
+  [
+    #figure(
+     image("img/alexnet.png", height: 28%),
+     caption: [leNet-5(左), AlexNet(右)]
+    )
+  ],
+  [
+    \
+    \
+    \
+    \
+AlexNet和LeNet的设计理念非常相似，但也存在差异。
+
+1. AlexNet比相对较小的LeNet5要深得多。
+2. AlexNet由八层组成：五个卷积层、两个全连接隐藏层和一个全连接输出层。
+3. AlexNet使用ReLU而不是sigmoid作为其激活函数。
+4. AlexNet使用`dropout`来控制模型的复杂度
+  ]
+)
+
+代码如下：
+
+````python
+net = nn.Sequential(
+    # 这里使用一个11*11的更大窗口来捕捉对象。
+    # 同时，步幅为4，以减少输出的高度和宽度。
+    # 另外，输出通道的数目远大于LeNet
+    nn.Conv2d(1, 96, kernel_size=11, stride=4, padding=1), nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2),
+    # 减小卷积窗口，使用填充为2来使得输入与输出的高和宽一致，且增大输出通道数
+    nn.Conv2d(96, 256, kernel_size=5, padding=2), nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2),
+    # 使用三个连续的卷积层和较小的卷积窗口。
+    # 除了最后的卷积层，输出通道的数量进一步增加。
+    # 在前两个卷积层之后，汇聚层不用于减少输入的高度和宽度
+    nn.Conv2d(256, 384, kernel_size=3, padding=1), nn.ReLU(),
+    nn.Conv2d(384, 384, kernel_size=3, padding=1), nn.ReLU(),
+    nn.Conv2d(384, 256, kernel_size=3, padding=1), nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2),
+    nn.Flatten(),
+    # 这里，全连接层的输出数量是LeNet中的好几倍。使用dropout层来减轻过拟合
+    nn.Linear(6400, 4096), nn.ReLU(),
+    nn.Dropout(p=0.5),
+    nn.Linear(4096, 4096), nn.ReLU(),
+    nn.Dropout(p=0.5),
+    # 最后是输出层。由于这里使用Fashion-MNIST，所以用类别数为10，而非论文中的1000
+    nn.Linear(4096, 10))
+````
+
+== VGG
+AlexNet没有提供后人任何设计模式，VGG是一种设计模板。
+
+VGG网络可以分为两部分：
+
+- 第一部分主要由卷积层和汇聚层组成
+- 第二部分由全连接层组成
+
+#figure(
+image("img/vgg.png", height: 33%),
+caption: [VGG block]
+)
+
+VGG-11使用8个卷积层和3个全连接层，原始的VGG网络使用5个VGG块
+
+````python
+def vgg_block(num_convs, in_channels, out_channels):
+    layers = []
+    for _ in range(num_convs):
+        layers.append(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1))
+        layers.append(nn.ReLU())
+        in_channels = out_channels
+    layers.append(nn.MaxPool2d(kernel_size=2,stride=2))
+    return nn.Sequential(*layers)
+
+def vgg(conv_arch):
+    conv_blks = []
+    in_channels = 1
+    # 卷积层部分
+    for (num_convs, out_channels) in conv_arch:
+        conv_blks.append(vgg_block(num_convs, in_channels, out_channels))
+        in_channels = out_channels
+
+    return nn.Sequential(
+        *conv_blks, nn.Flatten(),
+        # 全连接层部分
+        nn.Linear(out_channels * 7 * 7, 4096), nn.ReLU(), nn.Dropout(0.5),
+        nn.Linear(4096, 4096), nn.ReLU(), nn.Dropout(0.5),
+        nn.Linear(4096, 10))
+
+conv_arch = ((1, 64), (1, 128), (2, 256), (2, 512), (2, 512))
+net = vgg(conv_arch)
+````
+
+== NiN
+
+
+#image("img/NiN.png", height: 40%)
+
+NiN完全取消了全连接层，在最后使用的是一个*全局平均汇聚层*
+
+代码如下：
+
+````python
+def nin_block(in_channels, out_channels, kernel_size, strides, padding):
+    return nn.Sequential(
+        nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
+        nn.ReLU(),
+        nn.Conv2d(out_channels, out_channels, kernel_size=1), nn.ReLU(),
+        nn.Conv2d(out_channels, out_channels, kernel_size=1), nn.ReLU())
+
+net = nn.Sequential(
+    nin_block(1, 96, kernel_size=11, strides=4, padding=0),
+    nn.MaxPool2d(3, stride=2),
+    nin_block(96, 256, kernel_size=5, strides=1, padding=2),
+    nn.MaxPool2d(3, stride=2),
+    nin_block(256, 384, kernel_size=3, strides=1, padding=1),
+    nn.MaxPool2d(3, stride=2),
+    nn.Dropout(0.5),
+    # 标签类别数是10
+    nin_block(384, 10, kernel_size=3, strides=1, padding=1),
+    nn.AdaptiveAvgPool2d((1, 1)),
+    # 将四维的输出转成二维的输出，其形状为(批量大小,10)
+    nn.Flatten())
+````
+
+#pagebreak()
+
+== googleNet
+
+googleNet是优秀的神经网络模型设计, googleNet吸收了NiN中串联网络的思想
+
+其中的基本块是incepton块
+
+#figure(
+      image("img/inception.png"),
+      caption: [inception block]
+)
+
+````python
+class Inception(nn.Module):
+    # c1--c4是每条路径的输出通道数
+    def __init__(self, in_channels, c1, c2, c3, c4, **kwargs):
+        super(Inception, self).__init__(**kwargs)
+        # 线路1，单1x1卷积层
+        self.p1_1 = nn.Conv2d(in_channels, c1, kernel_size=1)
+        # 线路2，1x1卷积层后接3x3卷积层
+        self.p2_1 = nn.Conv2d(in_channels, c2[0], kernel_size=1)
+        self.p2_2 = nn.Conv2d(c2[0], c2[1], kernel_size=3, padding=1)
+        # 线路3，1x1卷积层后接5x5卷积层
+        self.p3_1 = nn.Conv2d(in_channels, c3[0], kernel_size=1)
+        self.p3_2 = nn.Conv2d(c3[0], c3[1], kernel_size=5, padding=2)
+        # 线路4，3x3最大汇聚层后接1x1卷积层
+        self.p4_1 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
+        self.p4_2 = nn.Conv2d(in_channels, c4, kernel_size=1)
+
+    def forward(self, x):
+        p1 = F.relu(self.p1_1(x))
+        p2 = F.relu(self.p2_2(F.relu(self.p2_1(x))))
+        p3 = F.relu(self.p3_2(F.relu(self.p3_1(x))))
+        p4 = F.relu(self.p4_2(self.p4_1(x)))
+        # 在通道维度上连结输出
+        return torch.cat((p1, p2, p3, p4), dim=1)
+````
+
+#grid(
+  columns: (1fr, 2fr),
+  [
+    #figure(
+      image("img/googleNet.png", height: 61%, width: 102%, fit: "stretch"),
+      caption: [googleNet]
+    )
+  ],
+  [
+    #set text(size: 8.2pt)
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    代码如下：
+    ````python
+b1 = nn.Sequential(nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+                  nn.ReLU(), 
+                  nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+b2 = nn.Sequential(nn.Conv2d(64, 64, kernel_size=1), 
+                  nn.ReLU(),
+                  nn.Conv2d(64, 192, kernel_size=3, padding=1), 
+                  nn.ReLU(), 
+                  nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+b3 = nn.Sequential(Inception(192, 64, (96, 128), (16, 32), 32),
+                   Inception(256, 128, (128, 192), (32, 96), 64),
+                   nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+b4 = nn.Sequential(Inception(480, 192, (96, 208), (16, 48), 64),
+                   Inception(512, 160, (112, 224), (24, 64), 64),
+                   Inception(512, 128, (128, 256), (24, 64), 64),
+                   Inception(512, 112, (144, 288), (32, 64), 64),
+                   Inception(528, 256, (160, 320), (32, 128), 128),
+                   nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+b5 = nn.Sequential(Inception(832, 256, (160, 320), (32, 128), 128),
+                   Inception(832, 384, (192, 384), (48, 128), 128),
+                   nn.AdaptiveAvgPool2d((1,1)),
+                   nn.Flatten())
+
+net = nn.Sequential(b1, b2, b3, b4, b5, nn.Linear(1024, 10))
+    ````
+  ]
+)
+
+== batch-norm
+
+#problem-box[
+
+ 训练深层神经网络是十分困难的，特别是在较短的时间内使他们收敛更加棘手。
+]
+
+数据预处理的方式通常会对最终结果产生巨大影响。
+
+批量规范化被认为可以使优化更加平滑。
+
+batchnorm存在*争议*
+
+#quote-block([
+回想一下，我们甚至不知道简单的神经网络（多层感知机和传统的卷积神经网络）为什么如此有效。
+即使在暂退法和权重衰减的情况下，它们仍然非常灵活，因此无法通过常规的学习理论泛化保证来解释它们是否能够泛化。
+
+在提出批量规范化的论文中，作者除了介绍了其应用，还解释了其原理：通过减少*内部协变量偏移*（internal covariate shift）。
+据推测，作者所说的*内部协变量转移*类似于上述的投机直觉，即变量值的分布在训练过程中会发生变化。
+
+然而，这种解释有两个问题：
+
+1、这种偏移与严格定义的*协变量偏移*（covariate shift）非常不同，所以这个名字用词不当；
+
+2、这种解释只提供了一种不明确的直觉，但留下了一个有待后续挖掘的问题：为什么这项技术如此有效？
+
+随着批量规范化的普及，*内部协变量偏移*的解释反复出现在技术文献的辩论，特别是关于“如何展示机器学习研究”的更广泛的讨论中。
+
+一些作者对批量规范化的成功提出了另一种解释：在某些方面，批量规范化的表现出与原始论文中声称的行为是相反的。
+
+然而，与机器学习文献中成千上万类似模糊的说法相比，内部协变量偏移没有更值得批评。
+很可能，它作为这些辩论的焦点而产生共鸣，要归功于目标受众对它的广泛认可。
+
+批量规范化已经被证明是一种不可或缺的方法。它适用于几乎所有图像分类器，并在学术界获得了数万引用。
+])
