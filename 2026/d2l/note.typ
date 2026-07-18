@@ -929,3 +929,430 @@ batchnorm存在*争议*
 
 批量规范化已经被证明是一种不可或缺的方法。它适用于几乎所有图像分类器，并在学术界获得了数万引用。
 ])
+
+== ResNet
+
+first is the residual block
+
+#figure(
+  image("img/residual_block.png"),
+  caption: [difference between residual block and normal one]
+)
+
+#figure(
+image("img/code_version.png"),
+caption: [包含以及不包含 1 × 1 卷积层的残差块]
+)
+
+下面是有关的代码：
+
+````python
+class Residual(nn.Module):
+  def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1):
+      super().__init__()
+      self.conv1 = nn.Conv2d(input_channels, num_channels,
+                            kernel_size=3, padding=1, stride=strides)
+      self.conv2 = nn.Conv2d(num_channels, num_channels,
+                            kernel_size=3, padding=1)
+      if use_1x1conv:
+        self.conv3 = nn.Conv2d(input_channels, num_channels,
+                                kernel_size=1, stride=strides)
+      else:
+        self.conv3 = None
+      self.bn1 = nn.BatchNorm2d(num_channels)
+      self.bn2 = nn.BatchNorm2d(num_channels)
+
+  def forward(self, X):
+      Y = F.relu(self.bn1(self.conv1(X)))
+      Y = self.bn2(self.conv2(Y))
+      if self.conv3:
+        X = self.conv3(X)
+      Y += X
+      return F.relu(Y)
+````
+
+````python
+def resnet_block(input_channels, num_channels, num_residuals, first_block=False):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(input_channels, num_channels,
+                                use_1x1conv=True, strides=2))
+        else:
+          blk.append(Residual(num_channels, num_channels))
+    return blk
+````
+
+ResNet的前两层跟之前介绍的GoogLeNet中的一样：
+
+在输出通道数为64、步幅为2的7 × 7卷积层后，接步幅
+为2的3 × 3的最大汇聚层。不同的是ResNet每个卷积层后增加了批量规范化层。
+
+
+#grid(
+  columns: (1fr, 1.8fr),
+  [
+    #figure(
+      image("img/resnet18.png", height: 50%),
+      caption: [resnet-18]
+    )
+  ],
+  [
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    相关代码如下：
+    ````python
+b1 = nn.Sequential(nn.Conv2d(1, 64, kernel_size=7,
+                             stride=2, padding=3),
+        nn.BatchNorm2d(64), nn.ReLU(),
+        nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+b3 = nn.Sequential(*resnet_block(64, 128, 2))
+b4 = nn.Sequential(*resnet_block(128, 256, 2))
+b5 = nn.Sequential(*resnet_block(256, 512, 2))
+net = nn.Sequential(b1, b2, b3, b4, b5,
+                    nn.AdaptiveAvgPool2d((1,1)),
+                    nn.Flatten(), nn.Linear(512, 10))
+    ````
+  ]
+)
+
+== DenseNet
+
+稠密连接网络（DenseNet）在某种程度上是ResNet的逻辑扩展。
+
+这里的逻辑扩展可以从泰勒展开式的角度来理解：
+
+$
+f(x) eq f(0) + f'(0) x + frac(f''(0), 2!)  x^2 + frac(f'''(0),3!)  x^3 + dots.
+$
+
+ResNet将函数展开为
+
+$ f(bold(x)) eq bold(x) + g(bold(x)). $
+
+DenseNet的输出是连接，这种连接是一种映射
+
+#mitex(`$$\mathbf{x} \to \left[
+\mathbf{x},
+f_1(\mathbf{x}),
+f_2([\mathbf{x}, f_1(\mathbf{x})]), f_3([\mathbf{x}, f_1(\mathbf{x}), f_2([\mathbf{x}, f_1(\mathbf{x})])]), \ldots\right].$$`)
+
+#align(center, [
+  #image("img/denseNet.png", height: 13%)
+])
+
+DenseNet使用了ResNet改良版的“批量规范化、激活和卷积”架构
+
+首先是DenseBlock
+
+````python
+def conv_block(input_channels, num_channels):
+    return nn.Sequential(
+        nn.BatchNorm2d(input_channels), nn.ReLU(),
+        nn.Conv2d(input_channels, num_channels, kernel_size=3, padding=1))
+
+class DenseBlock(nn.Module):
+    def __init__(self, num_convs, input_channels, num_channels):
+        super(DenseBlock, self).__init__()
+        layer = []
+        for i in range(num_convs):
+            layer.append(conv_block(
+                num_channels * i + input_channels, num_channels))
+        self.net = nn.Sequential(*layer)
+
+    def forward(self, X):
+        for blk in self.net:
+            Y = blk(X)
+            # 连接通道维度上每个块的输入和输出
+            X = torch.cat((X, Y), dim=1)
+        return X
+````
+
+然后是transistion block
+
+````python
+def transition_block(input_channels, num_channels):
+    return nn.Sequential(
+        nn.BatchNorm2d(input_channels), nn.ReLU(),
+        nn.Conv2d(input_channels, num_channels, kernel_size=1),
+        nn.AvgPool2d(kernel_size=2, stride=2))
+````
+
+类似于ResNet使用的4个残差块，DenseNet使用的是4个稠密块。
+
+在每个模块之间，ResNet通过步幅为2的残差块减小高和宽，DenseNet则使用过渡层来减半高和宽，并减半通道数。
+
+代码如下：
+
+````python
+b1 = nn.Sequential(
+    nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+    nn.BatchNorm2d(64), nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+
+num_channels, growth_rate = 64, 32
+num_convs_in_dense_blocks = [4, 4, 4, 4]
+blks = []
+for i, num_convs in enumerate(num_convs_in_dense_blocks):
+    blks.append(DenseBlock(num_convs, num_channels, growth_rate))
+    # 上一个稠密块的输出通道数
+    num_channels += num_convs * growth_rate
+    # 在稠密块之间添加一个转换层，使通道数量减半
+    if i != len(num_convs_in_dense_blocks) - 1:
+        blks.append(transition_block(num_channels, num_channels // 2))
+        num_channels = num_channels // 2
+
+net = nn.Sequential(
+    b1, *blks,
+    nn.BatchNorm2d(num_channels), nn.ReLU(),
+    nn.AdaptiveAvgPool2d((1, 1)),
+    nn.Flatten(),
+    nn.Linear(num_channels, 10))
+````
+
+= recurrent-neural-network
+
+== basis
+为了训练语言模型，我们需要计算单词的概率，
+以及给定前面几个单词后出现某个单词的条件概率，
+这些概率本质上就是语言模型的参数。
+
+基本的概率规则如下：
+
+#mitex(`$$P(x_1, x_2, \ldots, x_T) = \prod_{t=1}^T P(x_t  \mid  x_1, \ldots, x_{t-1}).$$`)
+
+一种常见的策略是执行某种形式的*拉普拉斯平滑*（Laplace smoothing），
+
+#mitex(`$$
+\begin{aligned}
+    \hat{P}(x) & = \frac{n(x) + \epsilon_1/m}{n + \epsilon_1}, \\
+    \hat{P}(x' \mid x) & = \frac{n(x, x') + \epsilon_2 \hat{P}(x')}{n(x) + \epsilon_2}, \\
+    \hat{P}(x'' \mid x,x') & = \frac{n(x, x',x'') + \epsilon_3 \hat{P}(x'')}{n(x, x') + \epsilon_3}.
+\end{aligned}
+$$`)
+
+还有马尔可夫模型与$n$元语法
+
+#mitex(`$$
+\begin{aligned}
+P(x_1, x_2, x_3, x_4) &=  P(x_1) P(x_2) P(x_3) P(x_4),\\
+P(x_1, x_2, x_3, x_4) &=  P(x_1) P(x_2  \mid  x_1) P(x_3  \mid  x_2) P(x_4  \mid  x_3),\\
+P(x_1, x_2, x_3, x_4) &=  P(x_1) P(x_2  \mid  x_1) P(x_3  \mid  x_1, x_2) P(x_4  \mid  x_2, x_3).
+\end{aligned}
+$$`)
+
+通常，涉及一个、两个和三个变量的概率公式分别被称为
+*一元语法*（unigram）、*二元语法*（bigram）和*三元语法*（trigram）模型。
+
+== simple rnn
+
+#figure(
+image("img/simple_rnn.png", height: 20%),
+caption: [simple rnn with hidden state]
+)
+
+== perplexity
+
+可以通过一个序列中所有的$n$个词元的交叉熵损失的平均值来衡量：
+
+#mitex(`$$\frac{1}{n} \sum_{t=1}^n -\log P(x_t \mid x_{t-1}, \ldots, x_1),$$`)
+
+由于历史原因，自然语言处理的科学家更喜欢使用一个叫做*困惑度*（perplexity）的量。
+
+#mitex(`$$\exp\left(-\frac{1}{n} \sum_{t=1}^n \log P(x_t \mid x_{t-1}, \ldots, x_1)\right).$$`)
+
+= modern rnn
+
+== gated recurrent unit
+
+#figure(
+image("img/gru.png", height: 28%),
+caption: [gated recurrent unit]
+)
+
+gru包括三个部分
+- 重置门
+- 更新门
+- 候选隐状态
+
+三个门的计算如下：
+
+#mitex(`$$
+\begin{aligned}
+\mathbf{R}_t &= \sigma(\mathbf{X}_t \mathbf{W}_{xr} + \mathbf{H}_{t-1} \mathbf{W}_{hr} + \mathbf{b}_r),\\
+\mathbf{Z}_t &= \sigma(\mathbf{X}_t \mathbf{W}_{xz} + \mathbf{H}_{t-1} \mathbf{W}_{hz} + \mathbf{b}_z),\\
+\tilde{\mathbf{H}}_t &= \tanh(\mathbf{X}_t \mathbf{W}_{xh} + \left(\mathbf{R}_t \odot \mathbf{H}_{t-1}\right) \mathbf{W}_{hh} + \mathbf{b}_h)
+\end{aligned}
+$$`)
+对于门控循环单元（GRU）中的重置门和更新门，其权重参数和偏置参数如下：
+- 输入权重：#math.italic($bold(W)_(x r), bold(W)_(x z) in bb(R)^(d times h)$)
+- 隐藏权重：#math.italic($bold(W)_(h r), bold(W)_(h z) in bb(R)^(h times h)$)
+- 偏置参数：#math.italic($bold(b)_r, bold(b)_z in bb(R)^(1 times h)$)
+
+对于候选隐藏状态，其权重和偏置为：
+- 输入权重：#math.italic($bold(W)_(x h) in bb(R)^(d times h)$)
+- 隐藏权重：#math.italic($bold(W)_(h h) in bb(R)^(h times h)$)
+- 偏置项：#math.italic($bold(b)_h in bb(R)^(1 times h)$)
+
+其中，符号 #math.italic($dot.o$) 表示 Hadamard 积（按元素乘积）运算符。
+
+于是最终的更新公式就是：
+
+#mitex(`$$\mathbf{H}_t = \mathbf{Z}_t \odot \mathbf{H}_{t-1}  + (1 - \mathbf{Z}_t) \odot \tilde{\mathbf{H}}_t.$$`)
+
+然后就是scratch的代码了
+
+````python
+// 初始化参数并返回参数
+def get_params(vocab_size, num_hiddens, device):
+    num_inputs = num_outputs = vocab_size
+
+    def normal(shape):
+        return torch.randn(size=shape, device=device)*0.01
+
+    def three():
+        return (normal((num_inputs, num_hiddens)),
+                normal((num_hiddens, num_hiddens)),
+                torch.zeros(num_hiddens, device=device))
+
+    W_xz, W_hz, b_z = three()  # 更新门参数
+    W_xr, W_hr, b_r = three()  # 重置门参数
+    W_xh, W_hh, b_h = three()  # 候选隐状态参数
+    # 输出层参数
+    W_hq = normal((num_hiddens, num_outputs))
+    b_q = torch.zeros(num_outputs, device=device)
+    # 附加梯度
+    params = [W_xz, W_hz, b_z, W_xr, W_hr, b_r, W_xh, W_hh, b_h, W_hq, b_q]
+    for param in params:
+        param.requires_grad_(True)
+    return params
+
+// 隐状态初始化
+def init_gru_state(batch_size, num_hiddens, device):
+    return (torch.zeros((batch_size, num_hiddens), device=device), )
+
+def gru(inputs, state, params):
+    W_xz, W_hz, b_z, W_xr, W_hr, b_r, W_xh, W_hh, b_h, W_hq, b_q = params
+    H, = state
+    outputs = []
+    for X in inputs:
+        Z = torch.sigmoid((X @ W_xz) + (H @ W_hz) + b_z)
+        R = torch.sigmoid((X @ W_xr) + (H @ W_hr) + b_r)
+        H_tilda = torch.tanh((X @ W_xh) + ((R * H) @ W_hh) + b_h)
+        H = Z * H + (1 - Z) * H_tilda
+        Y = H @ W_hq + b_q
+        outputs.append(Y)
+    return torch.cat(outputs, dim=0), (H,)
+````
+
+下面是高级api快乐版
+
+````python
+num_inputs = vocab_size
+gru_layer = nn.GRU(num_inputs, num_hiddens)
+model = d2l.RNNModel(gru_layer, len(vocab))
+````
+== lstm
+
+#figure(
+image("img/lstm.png"),
+caption: [lstm],
+)
+
+#mitex(`$$
+\begin{aligned}
+\mathbf{I}_t &= \sigma(\mathbf{X}_t \mathbf{W}_{xi} + \mathbf{H}_{t-1} \mathbf{W}_{hi} + \mathbf{b}_i),\\
+\mathbf{F}_t &= \sigma(\mathbf{X}_t \mathbf{W}_{xf} + \mathbf{H}_{t-1} \mathbf{W}_{hf} + \mathbf{b}_f),\\
+\mathbf{O}_t &= \sigma(\mathbf{X}_t \mathbf{W}_{xo} + \mathbf{H}_{t-1} \mathbf{W}_{ho} + \mathbf{b}_o),\\
+\tilde{\mathbf{C}}_t &= \text{tanh}(\mathbf{X}_t \mathbf{W}_{xc} + \mathbf{H}_{t-1} \mathbf{W}_{hc} + \mathbf{b}_c),\\
+\mathbf{C}_t &= \mathbf{F}_t \odot \mathbf{C}_{t-1} + \mathbf{I}_t \odot \tilde{\mathbf{C}}_t.\\
+\mathbf{H}_t &= \mathbf{O}_t \odot \tanh(\mathbf{C}_t).
+\end{aligned}
+$$`)
+
+这里的参数就不解释了，和上面的gru的类比就可以知道
+
+代码如下：
+
+````python
+# 依旧是初始化参数并返回
+def get_lstm_params(vocab_size, num_hiddens, device):
+    num_inputs = num_outputs = vocab_size
+
+    def normal(shape):
+        return torch.randn(size=shape, device=device)*0.01
+
+    def three():
+        return (normal((num_inputs, num_hiddens)),
+                normal((num_hiddens, num_hiddens)),
+                torch.zeros(num_hiddens, device=device))
+
+    W_xi, W_hi, b_i = three()  # 输入门参数
+    W_xf, W_hf, b_f = three()  # 遗忘门参数
+    W_xo, W_ho, b_o = three()  # 输出门参数
+    W_xc, W_hc, b_c = three()  # 候选记忆元参数
+    # 输出层参数
+    W_hq = normal((num_hiddens, num_outputs))
+    b_q = torch.zeros(num_outputs, device=device)
+    # 附加梯度
+    params = [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc,
+              b_c, W_hq, b_q]
+    for param in params:
+        param.requires_grad_(True)
+    return params
+
+# 额外的记忆元
+def init_lstm_state(batch_size, num_hiddens, device):
+    return (torch.zeros((batch_size, num_hiddens), device=device),
+            torch.zeros((batch_size, num_hiddens), device=device))
+
+def lstm(inputs, state, params):
+    [W_xi, W_hi, b_i, W_xf, W_hf, b_f, W_xo, W_ho, b_o, W_xc, W_hc, b_c,
+     W_hq, b_q] = params
+    (H, C) = state
+    outputs = []
+    for X in inputs:
+        I = torch.sigmoid((X @ W_xi) + (H @ W_hi) + b_i)
+        F = torch.sigmoid((X @ W_xf) + (H @ W_hf) + b_f)
+        O = torch.sigmoid((X @ W_xo) + (H @ W_ho) + b_o)
+        C_tilda = torch.tanh((X @ W_xc) + (H @ W_hc) + b_c)
+        C = F * C + I * C_tilda
+        H = O * torch.tanh(C)
+        Y = (H @ W_hq) + b_q
+        outputs.append(Y)
+    return torch.cat(outputs, dim=0), (H, C)
+````
+
+bi-rnn 不多做介绍了, 但是bi-rnn用了未来和过去的数据，所以只能在某些特定的任务上使用，不是通用的
+
+== encoder-deconder
+
+#figure(
+image("img/endecoder.png"),
+caption: [encoder, decoder架构]
+)
+
+encoder, decoder架构定义了一种映射的关系，用于机器翻译很合适
+
+== seq2seq
+
+#figure(
+image("img/s2s.png", height: 15%),
+caption: [seq2seq]
+)
+
+bos(beging of sequence), eos(end of sequence)
+
+mask屏蔽不相关项，BLUE来评估生成序列的质量, 训练，预测这几部分不做详细的介绍了
+
+#pagebreak()
+
+= other
+
+剩下的章节不多做笔记了
