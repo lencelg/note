@@ -1,0 +1,1 @@
+- c/c++ makefile: auto generate makefile for small project, good to use
