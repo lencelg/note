@@ -830,3 +830,138 @@ architecture as follow:
 )
 
 == GNN
+
+reason to use GNN
+- input data's structure is graph
+- find the underlying structure and relationship between data(implicit graph)
+
+need to lable data, but not all data are labled(expensive!)
+
+#text(fill: red)[problem: ] need some ways to make unlabled note learn the structure from its neighbors
+
+#text(fill: blue)[solution:]
+- spatial-based convolution: generalize the concept of convolution
+- spectral-based convolution: back to the definition of convolution in signal processing(fourier warning!)
+
+=== spatial-based convolution
+
+#let term(title, desc) = [
+  #strong(title): #desc
+]
+
+#term("Aggregate", "用 neighbor feature update 下一層的 hidden state")
+
+#term("Readout", "把所有 nodes 的 feature 集合起來代表整個 graph")
+
+#figure(
+image("img/spatial.png"),
+caption: [update $h^1_3$ with neighbors $h^0_0,h^0_2,h^0_4$ and its own feature]
+)
+
+Aggregate
+- direcit sum
+- weight sum(mean)
+- self-learned weight sum
+
+=== spectral-based convolution
+
+#figure(
+image("img/spectral.png", width: 89%),
+caption: [processes of spectral-based convolution]
+)
+
+threee part
+- Fourier transform
+- Multiplication
+- inverse Fourier transform
+
+no more details about it
+
+= Week 5
+
+== batch normalization introduction
+
+\
+*Feature Normalization*
+
+For each dimension $i$:
+- mean: $m_i$
+- standard deviation: $sigma_i$
+
+#align(center)[
+  $ tilde(x)_i^r <- (x_i^r - m_i) / sigma_i $
+]
+
+#text(fill: blue)[after normalization:] The means of all dims are 0, and the variances are all 1.
+
+In general, feature normalization makes gradient descent converge faster.
+
+#text(fill: red)[problem: ] the representation power of network might reduce
+
+#text(fill: blue)[solution: ]scale and shift
+
+\
+batch normalization three steps
+- *Calculate Batch Statistics*: For a given mini-batch of data, the layer computes the mean ($mu_B$) and variance ($sigma_B^2$).
+- *Normalize*: It subtracts the batch mean and divides by the square root of the variance plus a small constant (ε) for numerical stability.
+- *Scale and Shift*: To preserve the network's representational power, it applies learnable parameters, scale ($gamma$) and shift ($beta$), so the network can "undo" the normalization if a different distribution is optimal.
+#figure(
+image("img/batch_normalization.png",height: 32%),
+caption: [batch normalization example]
+)
+
+
+=== testing
+we do not always have #text(fill: red)[batch] at testing time to compute the mean and variance
+
+#text(fill: blue)[solution: ] computing the *moving average* of $mu$ and $gamma$ of the batches during training
+
+e.g. #align(center)[we get $mu^1$, $mu^2$, $mu^3$, ...,$mu^t$]
+
+#align(center)[then compute $mu arrow.l p mu plus (1 - p) mu^t$]
+
+#pagebreak()
+
+== Transformer
+
+#grid(
+  columns: (2fr, 1.0fr),
+  [
+seq2seq usage
+- Speech Recognition
+- Speech Translation
+- Machine Translation
+
+architecture
+- encoder
+- decoder
+  ],
+  [
+    #figure(
+image("img/seq2seq_simple.png", width: 100%),
+caption: [simple idea]
+    )
+  ]
+)
+
+old friend transformer, details are not fully recorded here
+
+#figure(
+image("img/fullarch.png", height: 55%),
+caption: [encoder and decoder]
+)
+
+masked self-attention
+- self-attention具有全局野, 这是矩阵乘法导致的，于是输出第一个token的时候会用到后面的信息，这在*生成式任务*是不可以的, 存在*信息泄漏*
+- mask 可以介入位置，使得满足限制
+
+\
+\
+#text(fill: red)[no note for other content of this week]
+- main class
+  - all kinds of atttention
+- extra class
+  - NAT model
+  - pointer network
+
+#pagebreak()
