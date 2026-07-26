@@ -2,7 +2,6 @@
 
 #show: noteworthy.with(
   paper-size: "a4",
-  font: "Source Han Serif",
   language: "EN",
   title: "ntu ml 2022 spring note",
   date: "2026 summer",
@@ -12,7 +11,7 @@
   watermark: "",
 )
 
-#set text(size: 8pt)
+#set text(size: 8pt, font: "Hack Nerd Font")
 #pagebreak()
 
 = PyTorch Basic Usage
@@ -596,7 +595,7 @@ $ theta_(t+1) = theta_t - hat(eta)_t dot.o m_t $
 - Normalization
 - Regularization
 
-= Week 3
+= Lec 3
 
 深度学习本质是在拟合一个函数。
 
@@ -647,7 +646,7 @@ Spatial Transformer Layer由三个顺序执行的组件构成：
   caption: [interpolation],
 )
 
-= Week 4
+= Lec 4
 
 == Self-Attention
 
@@ -835,9 +834,9 @@ reason to use GNN
 - input data's structure is graph
 - find the underlying structure and relationship between data(implicit graph)
 
-need to lable data, but not all data are labled(expensive!)
+need to lable data, but not all data are labeled(expensive!)
 
-#text(fill: red)[problem: ] need some ways to make unlabled note learn the structure from its neighbors
+#text(fill: red)[problem: ] need some ways to make unlabeled note learn the structure from its neighbors
 
 #text(fill: blue)[solution:]
 - spatial-based convolution: generalize the concept of convolution
@@ -866,7 +865,7 @@ Aggregate
 === spectral-based convolution
 
 #figure(
-image("img/spectral.png", width: 89%),
+image("img/spectral.png", width: 50%),
 caption: [processes of spectral-based convolution]
 )
 
@@ -877,7 +876,9 @@ threee part
 
 no more details about it
 
-= Week 5
+#pagebreak()
+
+= Lec 5
 
 == batch normalization introduction
 
@@ -906,7 +907,7 @@ batch normalization three steps
 - *Normalize*: It subtracts the batch mean and divides by the square root of the variance plus a small constant (ε) for numerical stability.
 - *Scale and Shift*: To preserve the network's representational power, it applies learnable parameters, scale ($gamma$) and shift ($beta$), so the network can "undo" the normalization if a different distribution is optimal.
 #figure(
-image("img/batch_normalization.png",height: 32%),
+image("img/batch_normalization.png",height: 39%),
 caption: [batch normalization example]
 )
 
@@ -966,7 +967,7 @@ masked self-attention
 
 #pagebreak()
 
-= Week 6
+= Lec 6
 == GAN
 basic idea: #text(fill: red)[network as generator]
 
@@ -1016,7 +1017,9 @@ evaluation metrics
 - IS（Inception Score）
 - Precision and Recall
 
-= Week 7
+#pagebreak()
+
+= Lec 6.5
 == BERT series
 
 #figure(
@@ -1052,3 +1055,97 @@ PLMs is very successful in many tasks
 === solution
 ==== Data Scarcity
 Data-Efficient Fine-tuning: Prompt tuning
+
+\
+need three thing for Prompt tuning
+- A prompt template
+- A PLM
+- A verbalizer
+\
+\
+\
+
+*prompt template*: convert data points into a natural language prompt
+
+#figure(
+image("img/prompt_template.png", width: 93%),
+caption: [prompt template example]
+)
+
+#pagebreak()
+*verbalizer*: A  mapping between the label and the vocabulary
+
+#figure(
+image("img/verbalizer.png", width: 50%),
+caption: [verbalizer example]
+)
+
+prompt tuning 和传统的 Standard Fine-tuning 不一样，这里不做详细笔记
+
+Prompt tuning has better performance than Standard Fine-tuning under data scarcity because 
+- it incorporates human knowledge
+- it intorduces no new parameters
+
+\
+*Few-shot learning*
+
+in addition to task description, model get a few example on the task, *No gradient updates are performed.*
+
+*LM-BFF*: better few-shot fine-tuning of language model
+- core concept: #text(fill: red)[prompt] + demonstration
+
+
+\
+*Semi-supervised learning*: we have some labeled training data and a large amount of unlabeled data
+
+method: Pattern-Exploiting Training(PET)
+#algorithm[PET] 
++ Use different prompts and verbalizer to prompt-tune different PLMs on the labeled data
++ Predict the unlabeled dataset and combine the predictions from different models
++ Use a PLM with classifier head to train on the soft-labeled data set 
+
+\
+*Zero-shot*: inference on the downstream task without any training data
+- example: just our daily use of LLM and ai agent
+
+==== model too large
+
+- Pre-train a large model, but use a samller model for the downstream problem
+- share parameters among the transformer layers
+
+\
+recall that standard Fine-tuning is actually modifying the hidden representation  of PLM to perform downstream tasks
+
+we can use *special submodules(adapter)* to modify the hidden representations
+
+#figure(
+image("img/adapter.png", height: 25%),
+caption: [adapter]
+)
+
+during Fine-tuning, only update the adapters and the classifier head
+
+#pagebreak()
+
+LoRA: Low-Rank Adapation of Large Language Models
+
+#figure(
+image("img/LoRA.png", width: 60%),
+caption: [LoRA]
+)
+
+\
+
+Prefix Tuning: Insert trainable prefix in each layer(transformer layer)
+
+Only the prefix (key and value) are updated during fine-tuning
+
+\
+
+Soft Prompting
+- Prepend the prefix embedding at the input laye
+
+\
+Early exit
+- Reduce the number of layers used during inference
+- Add a classifier at each layer
