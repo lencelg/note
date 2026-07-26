@@ -965,3 +965,90 @@ masked self-attention
   - pointer network
 
 #pagebreak()
+
+= Week 6
+== GAN
+basic idea: #text(fill: red)[network as generator]
+
+#figure(
+image("img/basic_idea.png", width: 50%),
+caption: [GAN basic idea]
+)
+
+#text(fill: red)[why we need distribution here?]
+
+answer: the same input has many different output, bring #text(fill: blue)[creativity] for model
+
+\
+two main part of GAN
+- generator
+- discriminator
+
+discriminator learns to assign high score to real objects and low score to generated objects
+#algorithm[ *GAN algorithm*
+  
+  - initialize generator and discriminator
+  - in each training iteration:
+    - Fix generator G and update discriminator D
+    - Fix discriminator D and update generator G
+]
+
+\
+#text(fill: blue)[generator objective]: minimize $G^star eq arg limits(min)_G italic("Div") (P_G, P_"data")$
+
+although we do not know the distribution of $P_G$ and $P_"data"$, we can #text(fill: blue)[sample] from them
+
+\
+for #text(fill: blue)[discriminator D], objective function is
+
+$ D^* = "arg" max_D V(D, G) $
+
+$ V(D, G) = E_(y ~ P_"data") [log D(y)] + E_(y ~ P_G) [log (1 - D(y))] $
+
+$D^star$ is actually the negative cross entropy, so we are actually wants to minimize the corss entropy
+
+后面介绍了一些不同的divergence, 不多做介绍
+
+\
+
+evaluation metrics
+- FID（Fréchet Inception Distance）
+- IS（Inception Score）
+- Precision and Recall
+
+= Week 7
+== BERT series
+
+#figure(
+image("img/self-supervised.png", width: 50%),
+caption: [difference between supervised and self-supervised]
+)
+
+the system learns to predict part of its input from other parts of its output
+
+to make use of self-supervised
+- *Using mask*: we can mask randomly some input
+- *Next sentence prediction(#text(fill: red)[not so helpful])*: add special token [CLS] and [SEP]
+- Robustly optimized BERT approach(RoBERTa)
+- SOP: sentence order prediction
+
+\
+but wait a minute, why BERT works?(simple intuition from class)
+- words embedding and similarity between works in context
+- Zero-shot Reading Comprehension
+- Cross-lingual Alignment
+
+== PLMs
+=== background
+Pre-trained Language Models (PLMs)/ 預訓練語言模型
+- Fine-tuning PLMs on downstream tasks achieves exceptional performance on many kinds of downstream tasks
+
+PLMs is very successful in many tasks
+
+=== problem
+- *Data Scarcity* in downstream tasks
+- The PLM is *too big*, and they are still getting bigger
+
+=== solution
+==== Data Scarcity
+Data-Efficient Fine-tuning: Prompt tuning
