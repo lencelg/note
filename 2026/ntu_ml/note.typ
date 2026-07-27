@@ -1149,3 +1149,78 @@ Soft Prompting
 Early exit
 - Reduce the number of layers used during inference
 - Add a classifier at each layer
+
+= Lec 7
+
+相邻的声音信号向量是很相似的，于是在mask中的序列要长一些
+
+Speech and images contain many details that are difficult to generate.
+
+we want a model learn without generation
+- Predictive Approach
+- Contrastive Learning
+- Bootstrapping Approaches
+- Simply Extra Regularization
+
+== Auto-encoder
+
+similar in style GAN
+
+#figure(
+image("img/auto-encoder.png", width: 50%),
+caption: [auto-encoder idea]
+)
+
+其实就是压缩图片然后还原，直觉就是表面复杂的信息是可以化简的，本质上没有那么多信息，变化是有限的
+
+#text(fill: blue)[variant]: De-noising Auto-encoder
+
+#figure(
+image("img/de-noising_encoder.png", width: 50%),
+caption: [De-noising encoder]
+)
+
+#pagebreak()
+
+== Feature disentangle
+
+
+#figure(
+
+image("img/feature_distangle.png", width: 50%),
+caption: [feature disentangle#text(fill: blue)[(特征解耦)] idea ]
+)
+
+application: Voice conversion
+
+== Anomaly Detection
+
+本质是在分类，正常和异常
+
+于是考虑使用Binary Classification
+
+#text(fill: red)[problem: 异常的数据往往很难采集，不适用]
+
+=== Categories
+
+#grid(
+  columns: (1fr, 2fr),
+  [
+    \
+    \
+    \
+    \
+    \
+    \
+    \
+    #text(fill: blue)[Extra commnet]: 图片里面就是训练的时候数据集分成两种情况
+- Clean
+- Polluted
+  ],
+  [
+#figure(
+image("img/categories_idea.png", width: 90%),
+caption: [Categories idea]
+)
+  ]
+)
