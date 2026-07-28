@@ -1162,6 +1162,8 @@ we want a model learn without generation
 - Bootstrapping Approaches
 - Simply Extra Regularization
 
+= Lec 8
+
 == Auto-encoder
 
 similar in style GAN
@@ -1176,7 +1178,7 @@ caption: [auto-encoder idea]
 #text(fill: blue)[variant]: De-noising Auto-encoder
 
 #figure(
-image("img/de-noising_encoder.png", width: 50%),
+image("img/de-noising_encoder.png", width:38%),
 caption: [De-noising encoder]
 )
 
@@ -1201,7 +1203,11 @@ application: Voice conversion
 
 #text(fill: red)[problem: 异常的数据往往很难采集，不适用]
 
-=== Categories
+\
+
+*Categories*
+
+于是异常检测任务可以大致分类一下
 
 #grid(
   columns: (1fr, 2fr),
@@ -1224,3 +1230,156 @@ caption: [Categories idea]
 )
   ]
 )
+
+=== Classifier
+
+the simple idea is just a classifier to predict the class
+
+#text(fill: blue)[note: ]also output the *confidence score*
+
+idea is simple but could work well on many tasks, can used for baseline
+#figure(
+image("img/classifier.png", width: 45%),
+caption: [classifier with confidence score]
+)
+
+#pagebreak()
+possible issue
+- 有一些特征的影响很强，可能导致带有相应特征异常数据会迷惑分类器
+
+=== without label
+
+problem formulation
+- Given a set of training data ${x^1, x^2, ..., x^N}$
+- find a function to detect the the input $x$'s similarity to training data
+
+#figure(
+image("img/similarity_idea.png", width: 50%),
+caption: [similarity idea]
+)
+
+a little bit of math time, example 是大家一起玩宝可梦然后要检测正常和捣蛋玩家
+
+Assuming the data points is sampled from a probability density function $f_theta (x)$,
+- $theta$ determines the shape of $f_theta (x)$
+- $theta$ is unknown, to be found from data
+
+$ L(theta) = f_theta (x^1) f_theta (x^2) dots.c f_theta (x^N) $ \
+Likelihood
+
+$ theta^* = arg limits("max")_theta L(theta) $
+
+example $f_theta (x)$ : Gaussian Distribution 
+$ f_(mu, Sigma)(x) = frac(1, (2 pi)^(D/2) |Sigma|^(1/2)) exp(- 1/2 (x - mu)^T Sigma^(-1) (x - mu)) $
+
+$
+theta^* = arg limits(max)_theta L(theta) \
+arrow.r.double mu^*, Sigma^star eq arg limits(max)_(mu^star, Sigma^star) L(mu, Sigma)
+$
+
+More...
+- One-class SVM
+- Isolated Forest
+
+== extra class
+=== Unsupervised learning: Linear method
+
+==== clustering
+- kmean
+- Hierarchical Agglomerative Clustering(HAC)
+
+==== Dimension Reduction
+- Feature selection
+- PCA
+
+PCA做的事情就是投影到低维
+
+#grid(
+  columns: (1fr, 2fr),
+  [
+    #v(17pt)
+    #h(53pt)$z_1 = w^1 dot x$ #h(14pt) #text(size: 10pt)[->]
+  ],
+  [
+   Project all data point onto $w^1$ and get a set of $z_1$, 
+
+   #text(fill: blue)[We want the variance of $z_1$ as large as possible]
+
+$ italic("Var")(z_1) = sum_z (z_1 - overline(z)_1)^2 quad norm(w^1)_2 = 1 $
+  ] 
+)
+
+#grid(
+  columns: (1fr, 2fr),
+  [
+    #v(17pt)
+    #h(53pt)$z_2 = w^2 dot x$ #h(14pt) #text(size: 10pt)[->]
+  ],
+  [
+    #v(10pt)
+   #text(fill: blue)[We want the variance of $z_2$ as large as possible]
+
+$ italic("Var")(z_2) = sum_z (z_2 - overline(z)_2)^2 quad norm(w^2)_2 = 1 quad w^1 dot w^2 = 0 $
+  ] 
+)
+
+$W = vec((w^1)^T, (w^2)^T, ...)$, $W$ is #text(fill: red)[orthogonal martix], (PS: too many math, no more note)
+
+= Lec 9 \~ 10
+
+== Explainable ML 
+
+好的解釋會讓人高興
+- Local explaination
+- Global explaination
+
+\
+#text(fill: blue)[*Saliency Map*]
+
+for an image:
+#align(center)[
+  $ {x_1, dots.c, x_n, dots.c, x_N} arrow.r.double {x_1, dots.c, x_n + Delta x, dots.c, x_N} $
+]
+
+pixels
+
+#align(center)[
+  $ e arrow.r.double e + Delta e $
+]
+
+loss of an example (the difference between model output and ground truth)
+
+#align(center)[
+  $ frac(Delta e, Delta x) arrow.r.double frac(partial e, partial x_n) $
+]
+
+== Attack in NLP
+这一年的attack的话题是围绕NLP的
+
+攻击NLP模型的时候能操作的只有离散的input token
+
+=== Evasion Attacks
+
+in image field
+
+Adding imperceptible noise on an image can change the prediction of a model
+
+#figure(
+image("img/evasion_attack.png", width: 50%),
+caption: [evasion attack example]
+)
+
+then apply the idea to NLP
+
+modify the input such that the model’s prediction corrupts
+while the modified input and the original input should not change the
+prediction for human
+
+- Sentiment Analysis
+- Dependency Parsing
+
+Evasion Attacks: Four Ingredients
+1. *Goal*: What the attack aims to achieve
+2. *Transformations*: How to construct perturbations for possible adversaries
+3. *Constrains*: What a valid adversarial example should satisfy
+4. *Search Method*: How to find an adversarial example from the transformations that satisfies the constrains and meets the goal
