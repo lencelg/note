@@ -595,7 +595,7 @@ $ theta_(t+1) = theta_t - hat(eta)_t dot.o m_t $
 - Normalization
 - Regularization
 
-= Lec 3
+= Lec 3: image as input
 
 深度学习本质是在拟合一个函数。
 
@@ -646,7 +646,7 @@ Spatial Transformer Layer由三个顺序执行的组件构成：
   caption: [interpolation],
 )
 
-= Lec 4
+= Lec 4: sequence as input
 
 == Self-Attention
 
@@ -878,7 +878,7 @@ no more details about it
 
 #pagebreak()
 
-= Lec 5
+= Lec 5: seq to seq
 
 == batch normalization introduction
 
@@ -967,7 +967,7 @@ masked self-attention
 
 #pagebreak()
 
-= Lec 6
+= Lec 6: Generation
 == GAN
 basic idea: #text(fill: red)[network as generator]
 
@@ -1019,7 +1019,7 @@ evaluation metrics
 
 #pagebreak()
 
-= Lec 6.5
+= Lec 6.5: self-supervised learning
 == BERT series
 
 #figure(
@@ -1150,7 +1150,7 @@ Early exit
 - Reduce the number of layers used during inference
 - Add a classifier at each layer
 
-= Lec 7
+= Lec 7: SSL for speech and image
 
 相邻的声音信号向量是很相似的，于是在mask中的序列要长一些
 
@@ -1162,7 +1162,7 @@ we want a model learn without generation
 - Bootstrapping Approaches
 - Simply Extra Regularization
 
-= Lec 8
+= Lec 8: Auto-encoder and Anomaly detection
 
 == Auto-encoder
 
@@ -1383,3 +1383,166 @@ Evasion Attacks: Four Ingredients
 2. *Transformations*: How to construct perturbations for possible adversaries
 3. *Constrains*: What a valid adversarial example should satisfy
 4. *Search Method*: How to find an adversarial example from the transformations that satisfies the constrains and meets the goal
+
+transformations
+- word level
+  - Word substitution
+    - by WordNet synonyms
+    - $k$NN or $epsilon$-ball counter-fitted GloVe embedding space
+    - by BERT masked language modeling (MLM) prediction
+    - by changing the inflectional form ...
+  - word deletion
+- char level
+  - Swap
+  - Substitution
+  - Deletion
+  - Insertion
+
+PS:  no more note for attach topic(not in interest)
+
+ #pagebreak()
+
+ = Lec 11: Adapation
+
+*Domain shift*: Training and testing data have different distributions.
+
+so we need #text(fill: blue)[Domain adaptation] (kind of Transfer learning)
+
+- Idea: training a model by source data, then *fine-tune* the model by target data
+- Challenge: only limited target data, be careful about overfitting
+
+\
+*Domain Adversarial Training*
+- Feature Extractor
+- Label predictor
+- Domain Classifier
+#figure(
+image("img/domain_adversial_training.png", width: 60%),
+caption: [idea of Domain Adversarial training]
+)
+
+*Limitation*: source and target data are aligned but target data may not be far from Decision boundaries
+
+solution
+- DIRT-T
+- Maximum classifier discrepancy
+
+other
+- Domain Generalization
+
+= Lec 12: RL
+just the same step as ml
++ function with unknown
++ define loss
++ optimization
+
+RL 不做笔记
+
+#pagebreak()
+
+= Lec 13: Network compression
+
+#text(fill: red)[problem: ] deploying ML(large paramenter) models in resource-constrained environments
+
+== Network Pruning
+Networks are typically *over-parameterized* (there is significant redundant weights or neurons)
+- so prun them
+
+weight pruning is hard to implement , so we prun neurons
+- smaller network is more difficult to learn successfully compared to pruned one
+
+#grid(
+  columns: (1fr, 1.8fr),
+  [
+    \
+    \
+    \
+    \
+    \
+- After pruning, the accuracy will drop (hopefully not too much)
+- Fine-tuning on training data for recover
+- Don’t prune too much at once, or the network won’t recover
+  ],
+  [
+#figure(
+image("img/prun.png", height: 25%),
+caption: [prun idea]
+)
+  ]
+)
+
+*Lottery Ticket Hypothesis*
+
+== Knowledge distallation
+we use a small net to learn to make close output as large networks (maybe ensemble ones)
+#figure(
+image("img/knowledge_distallation.png", width: 50%),
+caption: [knowledge distallation idea]
+)
+
+== Parameter Quantization
++ use less bit to represent a value
++ weight clustering
++ Represent frequent clusters by less bits, represent rare clusters by more bits
+
+PS: 后面就不多做笔记了
+
+#pagebreak()
+
+= Lec 14: Life-long learning
+Life Long Learning (LLL)
+- Continuous Learning
+- Never Ending Learning
+- Incremental Learning
+
+#text(fill: blue)[The network need to has enough capacity to learn both tasks]
+
+#text(fill: red)[problem: ] Catastrophic Forgetting(灾难性遗忘)
+
+Multi-task training can solve the problem(practice knowledge), but
+- computation issue
+- storage issue
+
+if we Train a model for each task, the knowledge cannot transfer across different tasks
+
+== Selective Synaptic Plasticity
+aka Regularization-based Approach
+
+*Basic Idea*: Some parameters in the model are important to the previous tasks. Only change the unimportant parameters.
+
+$theta^b$ is the model learned from the previous tasks.
+
+Each parameter $theta_i^b$ has a “guard” $b_i$.
+
+#align(center)[
+  $ L'(theta) = L(theta) + lambda sum_i b_i (theta_i - theta_i^b)^2 $
+]
+
+$L$ is the loss to be optimized, $theta$ are the parameters to be learning, \
+$b_i$ indicates how important this parameter is, and $theta_i^b$ are the parameters learned from previous task.
+
+Moreover, $theta$ should be close to $theta^b$ in certain directions.
+
+- If $b_i = 0$, there is no constraint on $theta_i$. #h(29pt) $arrow.r.double$ Catastrophic Forgetting
+
+- If $b_i = inf$, $theta_i$ would always be equal to $theta_i^b$. #h(17pt)$arrow.r.double$ Intransigence(固定不变)
+
+other method
+- Additional Neural Resource Allocation
+- Memory Reply
+
+= Lec 15: Meta Learning
+元学习的目标是训练模型掌握一种“学习的能力"
+
+still three steps
++ learnable component
++ compute loss based on #text(fill: red)[testing examples] of #text(fill: blue)[training tasks]
++ optimization
+  - learnable: gradient
+  - not learnable: RL/Evolutionary algorithm
+
+learning to initialize
+- *Model-Agnostic Meta-learning(MAML)*
+- reptile
+
+草草结束...
