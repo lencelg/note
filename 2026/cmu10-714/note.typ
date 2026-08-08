@@ -13,7 +13,7 @@
 #set page(numbering: "1")
 #show image: set image(width: 70%)
 
-= Lec 2: ML Refresher / Softmax Regression
+= ML Refresher / Softmax Regression
 
 算是复习课
 
@@ -93,7 +93,7 @@ $theta$ 在SGD的更新规则如下
 
 $ theta := theta - alpha / B X^T (Z - I_y) $
 
-= Lec 3: Manual Neural Networks / Backprop
+= Manual Neural Networks / Backprop
 
 #text(fill: red)[linear hypothesis problem: ]how to generate nonlinear classification boundaries?
 
@@ -210,7 +210,7 @@ $
 
 PS: $(partial Z_(i+1)) / (partial W_i)$ is an operation called the "vector Jacobian product"
 
-= Lec 4: Automatic Differentiation
+= Automatic Differentiation
 
 == Numerical differentiation
 
@@ -361,7 +361,7 @@ $ bar(X)_(i,k) = sum_j (partial Z_(i,j)) / (partial X_(i,k)) bar(Z)_(i,j) = sum_
 
 $ bar(X) = bar(Z) W^T $
 
-= Lec 5: AD implementation
+= AD implementation
 
 `detach()` 函数可以断开计算图的节点从而节省内存
 
@@ -379,7 +379,7 @@ for i in range(100):
 sum_loss = (sum_loss + x * x).detach()
 ```
 
-= Lec 6: Fully connected networks, optimization, initialization
+= Fully connected networks, optimization, initialization
 
 A L-layer, fully connected network, a.k.a. multi-layer perceptron (MLP) with an explicit bias term
 
@@ -503,3 +503,74 @@ If use a ReLU nonlinearity, then "half" the components of $z_i$ will be set to z
 $ W_i ~ cal(N)(0, 2 / n I) "  " "Kaiming normal initialization" $
 
 PS: Kaiming 正态初始化的根本原因在于 _ReLU 激活函数对信号方差的减半效应_
+
+= Neural Network Abstraction
+
+Several parts
++ `nn.Module` to moudularize and Compose Things Together
+  - For given inputs, how to compute outputs
+  - Get the list of (trainable) parameters
+  - Ways to initialize the parameters
++ Regularization and optimizer
++ initialization
++ Data loader and preprocessing
+
+= Normalization and Regularization
+== normalization
+initialization matters for optimization !!!
+
+there are two ways of normalization
+
+#figure(
+image("img/two_normalization_method.png"),
+caption: [tow ways of normalization]
+)
+=== layer normalization
+$
+  hat(z)_(i+1) = sigma_i (W_i^T z_i + b_i)
+$
+
+$
+  z_(i+1) = frac(hat(z)_(i+1) - E[hat(z)_(i+1)], ("Var"[hat(z)_(i+1)] + epsilon)^(1/2))
+$
+=== batch normalization
+
+layer normalization normalizes the #text(fill: blue)[rows] of the matrix
+
+batch normalization normalizes the #text(fill: red, "columns") of the martix
+
+\
+
+batch norm makes the predicitions for each example dependent on the entire batch
+
+#text(fill: red)[test time:]
+compute a running average of mean/variance for all features at each layer $hat(mu)_(i+1), hat(sigma)_(i+1)^2$, and normalize by these quantities
+
+$ (z_(i+1))_j = frac((hat(z)_(i+1))_j - (hat(mu)_(i+1))_j, ((hat(sigma)_(i+1)^2)_j + epsilon)^(1/2)) $
+
+= Regularization a.k.a. weight decay
+== $ell_2$ Regularization
+
+
+$ limits("minimize")_(W_(1:L)) space (1)/m sum_(i=1)^m ell(h_(W_(1:L))(x^((i))), y^((i))) + lambda/2 sum_(i=1)^L ||W_i||_2^2 $
+
+Results in the gradient descent updates:
+
+$ W_i := W_i - alpha nabla_(W_i) ell(h(X), y) - alpha lambda W_i = (1 - alpha lambda) W_i - alpha nabla_(W_i) ell(h(X), y) $
+
+at each iteration we #text(fill: blue)[#emph("shrink")] the weights by a factor $(1 - alpha lambda)$ before taking the gradient step
+
+== Dropout
+Dropout is another regularization strategy
+$
+  hat(z)_(i+1) = sigma_i (W_i^T z_i + b_i)
+$
+
+$
+  (z_(i+1))_j = cases(
+    (hat(z)_(i+1))_j \/ (1 - p) #h(26pt)"with probability" 1 - p,
+    0 #h(92pt)"with probability" p
+  )
+$
+
+instructive to consider Dropout as bringing a similar stochastic approximation as SDG to the setting of individual activations
