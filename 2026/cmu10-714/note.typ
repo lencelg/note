@@ -574,3 +574,87 @@ $
 $
 
 instructive to consider Dropout as bringing a similar stochastic approximation as SDG to the setting of individual activations
+
+= Convolutional Networks
+_Multi-channel_ convolutions:
+
+$ x in RR^(h times w times c_"in") " denotes " c_"in" " channel, size " h times w " image input" $
+$ z in RR^(h times w times c_"out") " denotes " c_"out" " channel, size " h times w " image input" $
+$ W in RR^(c_in times c_"out" times k times k) " (order 4 tensor) denotes convolutional filter" $
+
+single output channel is sum of convolutions over all input channels in Multi-channel convolutions 
+
+#align(center)[
+  $ z[:, :, s] = sum_(r=1)^(c_in) x[:, :, r] star W[r, s, :, :] $
+]
+
+import concepts:
+- Padding
+- Strided Convolution/ Pooling
+- Grouped Convolution
+- Dilations
+
+== Differentiating convolutions
+consider the simpler case of a matrix-vector product operation
+
+$ z = W x $
+
+$ (partial z)/(partial x) = W $
+
+so we need to compute the adjoint product
+
+$ overline(v)^T W <=> W^T overline(v) $
+
+computing the backward pass requires multipling by transpose $W^T$
+
+#figure(
+  image("img/1d_diff.png", width: 67%),
+  caption: [convolutions as matrix multiplication version 1]
+)
+
+\
+notice that the operation $hat(W)^T v$ is itself just a convolution with the “flipped” filter
+
+adjoint operator $overline(v) (partial "conv"(x, W))/(partial x)$ just requires convolving $overline(v)$ with the flipped $W$:
+
+$ overline(v) (partial "conv"(x, W)/(partial x)) eq "conv"(overline(v), "flip"(W)) $
+
+= Hardware acceleration
+
+store a matrix in memory
+
+Row major:  
+$A[i, j] => A_"data"[i * A."shape"[1] + j]$
+
+Column major:  
+$A[i, j] => A_"data"[j * A."shape"[0] + i]$
+
+Strides format:  
+$A[i, j] => A_"data"[i * A."strides"[0] + j * A."strides"[1]]$
+
+\
+strides can perform transformation/slicing in zero copy way
+\
+\
+------------------------------------------------------------------------------------------------------------------------------------
+
+vectorization example: adding two arrays of length 256
+
+````c
+void veccad(float* A, float *B, float* C) {
+    for (int i = 0; i < 64; ++i) {
+    float4 a = load_float4(A + i*4);
+    float4 b = load_float4(B + i*4);
+    float4 c = add_float4(a, b);
+    store_float4(c + i*4, c);
+    }
+}
+// memory (A, B, C) needs to be aligned to 128 bits
+````
+
+use `float4` to load 4 float number at once
+
+also can use openmp lib to add Parallelization
+---
+
+
