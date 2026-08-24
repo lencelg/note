@@ -8,7 +8,7 @@
   logo: "",
 )
 
-#set text(font: ("New Computer Modern", "Noto Sans CJK SC"))
+#set text(font: ("New Computer Modern", "Noto Sans CJK SC"), size: 11pt)
 #set par(justify: true, leading: 0.7em)
 #set page(numbering: "1")
 #show image: set image(width: 70%)
@@ -655,6 +655,141 @@ void veccad(float* A, float *B, float* C) {
 use `float4` to load 4 float number at once
 
 also can use openmp lib to add Parallelization
----
 
+== Matrix Multiplication
 
+base version
+
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 1em,
+  ```c
+  dram float A[n][n], B[n][n], C[n][n];
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      register float c = 0;
+      for (int k = 0; k < n; ++k) {
+        register float a = A[i][k];
+        register float b = B[j][k];
+        c += a * b;
+      }
+      C[i][j] = c;
+    }
+  }
+  ```,
+  [
+    \
+    \
+    A's dram->register time cost:  $n^3$ \
+    B's dram->register time cost:  $n^3$ \
+    A's register memory cost :  1 \
+    B's register memory cost :  1 \
+    C's register memory cost :  1 \
+    \
+    Load cost:  2 \* dramSpeed \* $n^3$ \
+    Register cost: 3
+  ]
+)
+
+\
+*Register tiled matrix multiplication*
+
+#grid(
+  columns: (1.2fr, 1.1fr),
+  gutter: 2em,
+  ```c
+  dram float A[n/v1][n/v3][v1][v3];
+  dram float B[n/v2][n/v3][v2][v3];
+  dram float C[n/v1][n/v2][v1][v2];
+
+  for (int i = 0; i < n/v1; ++i) {
+    for (int j = 0; j < n/v2; ++j) {
+      register float c[v1][v2] = 0;
+      for (int k = 0; k < n/v3; ++k) {
+        register float a[v1][v3] = A[i][k];
+        register float b[v2][v3] = B[j][k];
+        c += dot(a, b.T);
+      }
+      C[i][j] = c;
+    }
+  }
+  ```,
+  [
+    \
+    \
+    A's dram->register time cost:  $n^3/"v2"$ \
+    B's dram->register time cost:  $n^3/"v1"$ \
+    A's register memory cost:      $"v1"*"v3"$ \
+    B's register memory cost:      $"v2"*"v3"$ \
+    C's register memory cost:      $"v1"*"v2"$ \
+    \
+    *load cost:*  $"dramSpeed" * (n^3/"v2" + n^3/"v1")$ \
+    *Register cost:* $"v1"*"v3" + "v2"*"v3" + "v1"*"v2"$
+  ]
+)
+
+notice that v3 does not affect the load cost, so we can choose v3 equals 1
+
+the code reuse the memory, so load cost reduce
+
+\
+*Cache line aware tiling*
+
+#grid(
+  columns: (1.2fr, 1.1fr),
+  gutter: 2em,
+  ```c
+  dram float A[n/b1][b1][n];
+  dram float B[n/b2][b2][n];
+  dram float C[n/b1][n/b2][b1][b2];
+  for (int i = 0; i < n/b1; ++i) {
+      llcache float a[b1][n] = A[i];
+      for (int j = 0; j < n/b2; ++j) {
+          llcache float b[b2][n] = B[j];
+
+          C[i][j] = dot(a, b.T);
+      }
+  }
+  ```,
+  [
+    \
+
+    A's dram->l1 time cost: $n^2$ \
+    B's dram->l1 time cost: $n^3 \/ "b1"$ \
+
+    *Constraints:* \
+    - $"b1" * n + "b2" * n < "l1 cache size"$ \
+    - To still apply register blocking on dot \
+      - $"b1" % "v1" == 0$ \
+      - $"b2" % "v2" == 0$
+  ]
+)
+
+putting together
+
+```c
+  dram float A[n/b1][b1/v1][n][v1];
+  dram float B[n/b2][b2/v2][n][v2];
+
+  for (int i = 0; i < n/b1; ++i) {
+      l1cache float a[b1/v1][n][v1] = A[i];
+      for (int j = 0; j < n/b2; ++j) {
+          l1cache float b[b2/v2][n][v2] = B[j];
+          for (int x = 0; x < b1/v1; ++x) {
+              for (int y = 0; y < b2/v2; ++y) {
+                  register float c[v1][v2] = 0;
+                  for (int k = 0; k < n; ++k) {
+                      register float ar[v1] = a[x][k][::];
+                      register float br[v2] = b[y][k][::];
+                      C += dot(ar, br.T)
+                  }
+              }
+          }
+      }
+  }
+```
+*load cost:*  $"l1speed" * (n^3\/"v2" + n^3\/"v1") + "dramspeed" * (n^2 + n^3\/"b1")$
+
+*memory reuse matters*
+
+= GPU Acceleration
