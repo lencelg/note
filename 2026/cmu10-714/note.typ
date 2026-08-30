@@ -793,3 +793,30 @@ putting together
 *memory reuse matters*
 
 = GPU Acceleration
+
+#grid(
+  columns: (1fr, 1.8fr),
+
+  [
+    #image("img/gpu.png", width: 85%)
+  ],
+  [
+    \
+    \
+    - Single instruction multiple threads (SIMT)
+    - All threads executes the same code, but can take different path
+    - Threads are grouped into blocks
+      - Thread within the same block have shared memory
+    - Blocks are grouped into a launch grid
+    - A kernel executes a grid 
+  ]
+)
+
+usually data come from cpu and the call gpu to do the acceleration
+
+#text(fill: red)[data copy is expensive!]
+
+real applications usually *keep data in gpu memory as long as possible*
+
+- Thread level: register tiling
+- Block level: shared memory tiling
