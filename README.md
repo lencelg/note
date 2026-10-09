@@ -1,7 +1,7 @@
 ## self-learning cs note
 
-component
-- mainly note is written in markdown, use [markdown preview enhanced](shd101wyy.github.io/markdown-preview-enhanced/#/) to preview
+components
+- mainly note is written in markdown, note with latex math should use [markdown preview enhanced](shd101wyy.github.io/markdown-preview-enhanced/#/) to preview
 - some note is written in typst
 - very few note is written asciidoc
 

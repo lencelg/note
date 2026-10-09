@@ -33,7 +33,7 @@ Godot 提供了专门的 2D 和 3D 渲染引擎
 
 Godot 还有一些特殊函数具有一定的自定义功能.
 
-以 _process() 函数为例。
+以 `_process()` 函数为例。
 
 ```gdscript
 func _process(delta):
