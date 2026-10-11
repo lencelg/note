@@ -1,5 +1,9 @@
 # algorithm 
+
+**this note is not finished and not in consideration**
+
 PS: readed from 算法设计与分析（第2版） and ppt from lecture
+
 ---
 ## Introduction
 ### big O notation

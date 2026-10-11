@@ -3,8 +3,6 @@ author: lencelg from Arcadia Bay
 title: note
 ---
 
-[TOC]
-
 # 编程工作流的变化
 
 ## 传统编程工作流
