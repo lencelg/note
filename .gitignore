@@ -2,4 +2,6 @@
 .vscode
 typst_template
 .opencode
-AGENT.md
+AGENTS.md
+.codex
+.claude
