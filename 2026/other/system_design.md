@@ -1,5 +1,113 @@
+- [System Design Introductions](#system-design-introductions)
+- [CAP Theorem](#cap-theorem)
+  - [CP (Consistency + Partition Tolerance)](#cp-consistency--partition-tolerance)
+  - [AP (Availability + Partition Tolerance)](#ap-availability--partition-tolerance)
+  - [Performance vs Scalability](#performance-vs-scalability)
+  - [Latency vs Throughput](#latency-vs-throughput)
+  - [Availability vs Consistency](#availability-vs-consistency)
+  - [Consistency Patterns](#consistency-patterns)
+    - [Weak Consistency](#weak-consistency)
+    - [Eventual Consistency](#eventual-consistency)
+    - [Strong Consistency](#strong-consistency)
+  - [Availability Patterns](#availability-patterns)
+    - [Fail-Over](#fail-over)
+      - [1. Active-Passive](#1-active-passive)
+      - [2. Active-Active](#2-active-active)
+    - [Replication](#replication)
+      - [1. Master-Slave](#1-master-slave)
+      - [2. Master-Master](#2-master-master)
+      - [3. No-leader Architecture](#3-no-leader-architecture)
+- [availability in numbers](#availability-in-numbers)
+  - [how to achieve high availability](#how-to-achieve-high-availability)
+- [Basic Concepts](#basic-concepts)
+  - [background jobs](#background-jobs)
+    - [Event-Driven Triggers](#event-driven-triggers)
+    - [Scheduled—Driven Triggers (Cron Jobs)](#scheduleddriven-triggers-cron-jobs)
+  - [DNS](#dns)
+  - [CDN](#cdn)
+    - [CDN push](#cdn-push)
+    - [CDN pull](#cdn-pull)
+    - [cons: CDN](#cons-cdn)
+  - [reverse server](#reverse-server)
+  - [DDos](#ddos)
+    - [DDoS Attack Layers](#ddos-attack-layers)
+      - [Network Layer Attack(L3/L4)](#network-layer-attackl3l4)
+      - [Application Layer Attack(L7)](#application-layer-attackl7)
+  - [Load Balancer](#load-balancer)
+    - [Load Balancer Algorithms](#load-balancer-algorithms)
+    - [Layer four and Layer seven balancing](#layer-four-and-layer-seven-balancing)
+  - [Platform Layer](#platform-layer)
+- [Microservice](#microservice)
+    - [Compare to Sigle Architecture](#compare-to-sigle-architecture)
+    - [pros](#pros)
+    - [cons](#cons)
+    - [Classic Components](#classic-components)
+    - [When to use](#when-to-use)
+- [Databases](#databases)
+  - [Four type of NoSQL Database](#four-type-of-nosql-database)
+    - [Key-Value Databases](#key-value-databases)
+    - [Document Databases](#document-databases)
+    - [Wide-Column Databases](#wide-column-databases)
+    - [Graph Databases](#graph-databases)
+    - [Comparsion Table](#comparsion-table)
+    - [How to Choose](#how-to-choose)
+  - [RDBMS (Relational Database)](#rdbms-relational-database)
+    - [Comparsion](#comparsion)
+- [Caching](#caching)
+  - [five caching strategies](#five-caching-strategies)
+    - [1. Cache-Aside (Lazy Loading)](#1-cache-aside-lazy-loading)
+    - [2. Read-Through](#2-read-through)
+    - [3. Write-Through](#3-write-through)
+    - [4. Write-Back (Write-Behind)](#4-write-back-write-behind)
+    - [5. Write-Around](#5-write-around)
+    - [Refresh Ahead](#refresh-ahead)
+    - [Comparsion Table](#comparsion-table-1)
+  - [Type of Caching](#type-of-caching)
+    - [Client Caching](#client-caching)
+    - [CDN Caching](#cdn-caching)
+    - [Web Server Caching](#web-server-caching)
+    - [Database Caching](#database-caching)
+    - [Application Caching](#application-caching)
+    - [Summary Table](#summary-table)
+- [Asynchronism](#asynchronism)
+  - [Message Queue](#message-queue)
+  - [Task Queue](#task-queue)
+  - [Back pressure](#back-pressure)
+  - [cons](#cons-1)
+- [Idempotent Operation](#idempotent-operation)
+  - [Idempotence in Mathematics](#idempotence-in-mathematics)
+    - [Common Mathematical Examples](#common-mathematical-examples)
+  - [From Mathematics to Computer Science](#from-mathematics-to-computer-science)
+  - [Why Idempotence Matters](#why-idempotence-matters)
+  - [Idempotence in HTTP Methods](#idempotence-in-http-methods)
+  - [Key to Implementation: Idempotency Keys](#key-to-implementation-idempotency-keys)
+- [Communication](#communication)
+  - [底层协议：HTTP、TCP、UDP](#底层协议httptcpudp)
+  - [上层通信风格/框架 overview ：RPC、gRPC、REST、GraphQL](#上层通信风格框架-overview-rpcgrpcrestgraphql)
+  - [Relationship](#relationship)
+  - [remote procedure call(RPC)](#remote-procedure-callrpc)
+    - [cons](#cons-2)
+  - [Representational State Transfer(REST)](#representational-state-transferrest)
+- [Performance Antipatterns](#performance-antipatterns)
+  - [数据与数据库类](#数据与数据库类)
+    - [Improper Instantiation（不当实例化）](#improper-instantiation不当实例化)
+    - [Monolithic Persistence（单体持久化）](#monolithic-persistence单体持久化)
+    - [Busy Database（忙碌数据库）](#busy-database忙碌数据库)
+    - [Extraneous Fetching（多余的数据获取）](#extraneous-fetching多余的数据获取)
+  - [计算与资源类](#计算与资源类)
+    - [Noisy Neighbor（吵闹邻居）](#noisy-neighbor吵闹邻居)
+    - [Synchronous I/O（同步 I/O）](#synchronous-io同步-io)
+    - [Busy Frontend（忙碌前端）](#busy-frontend忙碌前端)
+    - [三、 网络与通信类](#三-网络与通信类)
+    - [Chatty I/O（话痨 I/O）](#chatty-io话痨-io)
+    - [Retry Storm（重试风暴）](#retry-storm重试风暴)
+  - [缓存与架构类](#缓存与架构类)
+    - [No Caching（无缓存）](#no-caching无缓存)
+- [Additional Content](#additional-content)
+  - [2 的次方表](#2-的次方表)
+  - [每个程序员都应该知道的延迟数](#每个程序员都应该知道的延迟数)
 
-# System Design Introduction
+# System Design Introductions
 [A good chinese guide](https://github.com/donnemartin/system-design-primer/blob/master/README-zh-Hans.md) on this topic
 
 System design is the process of defining the architecture, components, modules, and data flow of a system to satisfy a set of requirements
@@ -85,18 +193,18 @@ goal: **在可接受延迟下最大化吞吐**
 
 有同一份数据的多份副本，我们面临着怎样同步它们的选择，以便让客户端有一致的显示数据。回想CAP 理论中的一致性定义 - 每次访问都能获得最新数据但可能会收到错误响应
 
-### 弱一致性
+### Weak Consistency
 
 在写入之后，访问可能看到，也可能看不到（写入数据）。尽力优化之让其能访问最新数据。
 
 这种方式可以 memcached 等系统中看到。弱一致性在 VoIP，视频聊天和实时多人游戏中等真实实例中表现不错。打个比方，如果你在通话中丢失信号几秒钟时间，当重新连接时你是听不到这几秒钟所说的话的。
 
-### 最终一致性
+### Eventual Consistency
 
 在写入后，访问最终能看到写入数据（通常在数毫秒内）。数据被异步复制。
 DNS 和 email 等系统使用的是此种方式。最终一致性在高可用性系统中效果不错。
 
-### 强一致性
+### Strong Consistency
 
 在写入后，访问立即可见。数据被同步复制。
 
@@ -104,18 +212,18 @@ DNS 和 email 等系统使用的是此种方式。最终一致性在高可用性
 
 ## Availability Patterns
 
-### Fail-Over（故障转移）
+### Fail-Over
 
 **定义**：当系统中的一个节点（服务器/数据库）发生故障时，自动将流量或工作负载切换到备用节点，以保证服务不中断。图片中给出了两种常见的节点部署模式：
 
-#### 1. Active-Passive（主备模式 / 活动-待机）
+#### 1. Active-Passive
 *   **工作方式**：只有主节点（Active）对外提供服务，备用节点（Passive）处于待命状态，实时同步主节点的数据。
 *   **故障切换（Fail-Over）**：当主节点宕机，负载均衡器或心跳检测机制会检测到故障，并将备用节点提升为新的主节点，接管所有流量。
 *   **优点**：数据一致性强（可以同步复制），架构简单。
 *   **缺点**：资源浪费（备用节点平时不干活）；切换过程中可能出现短暂的服务中断。
 *   **场景**：传统关系型数据库主库、核心支付系统。
 
-#### 2. Active-Active（双活模式 / 活动-活动）
+#### 2. Active-Active
 *   **工作方式**：两个或多个节点同时对外提供服务（通常通过 **Load Balancing** 负载均衡分发流量）。它们互为备份。
 *   **故障切换（Fail-Over）**：当一个节点宕机，负载均衡器自动将原本发给它的流量分发给其他存活节点。
 *   **优点**：资源利用率高（没有闲置机器）；吞吐量高；切换速度快。
@@ -126,14 +234,14 @@ DNS 和 email 等系统使用的是此种方式。最终一致性在高可用性
 
 **定义**：为了保证数据不丢失和高可用，通常需要把数据复制到多个节点上。图片列出了两种主要的数据库复制架构：
 
-#### 1. Master-Slave（主从复制）
+#### 1. Master-Slave
 *   **工作方式**：一个主节点（Master）负责处理写操作（Write），多个从节点（Slave）从主节点同步数据，只负责处理读操作（Read）。
 *   **故障处理**：如果主节点宕机，需要手动或自动（如使用 Sentinel、Proxy）将一个从节点提升（Promote）为新的主节点。这本质上是结合了 Active-Passive 的 Fail-Over 机制。
 *   **优点**：**读扩展性极好**（可以把大量读请求分摊给从节点）；数据备份方便。
 *   **缺点**：写操作仍是单点瓶颈；从节点有复制延迟（容易读到旧数据，即最终一致性）。
 *   **场景**：读多写少的业务，如新闻网站、内容管理系统。
 
-#### 2. Master-Master（双主 / 主主复制）
+#### 2. Master-Master
 *   **工作方式**：两个或多个节点都可以处理写操作，互为主从，相互同步数据。
 *   **故障处理**：任何一台宕机，另一台可以继续提供读写服务，实现真正的 Active-Active。
 *   **优点**：写操作也可以水平扩展；可用性极高。
@@ -346,7 +454,7 @@ CDN 拉取是当第一个用户请求该资源时，从服务器上拉取资源�
 
 DDoS 之所以叫“分布式”，是因为攻击流量来自全球各地被控制的设备，比如被感染的电脑、服务器、摄像头、路由器等物联网设备, 这些被控制的设备组成的网络叫 **僵尸网络（Botnet）**。
 
-### DDoS 的攻击层次
+### DDoS Attack Layers
 
 #### Network Layer Attack(L3/L4)
 
@@ -529,28 +637,28 @@ Choosing a database involves deciding between relational and non-relational mode
 ## Four type of NoSQL Database
 ![four_types_of_NoSQL](_res/four_types_of_NoSQLdatabase.png)
 
-### 键值数据库 (Key-Value Databases)
+### Key-Value Databases
 *   **数据模型**：最简单的模型，数据存储为键值对，值可以是任意二进制数据。
 *   **工作原理**：数据库不关心值的内部结构，只负责根据键快速存取。它使用哈希表实现**O(1)的查找速度**。
 *   **代表**：Redis, Amazon DynamoDB, Memcached。
 *   **优点**：**极快**（Redis单节点可达数百万次操作/秒）、模型简单、支持丰富数据结构（如列表、集合）。
 *   **适用场景**：缓存、会话管理、实时查找。
 
-### 文档数据库 (Document Databases)
+### Document Databases
 *   **数据模型**：数据以JSON/BSON等文档形式存储，文档内部可以是嵌套的层次结构。
 *   **工作原理**：可以直接查询文档内部的任何字段，而不仅仅是主键。支持**多文档ACID事务**（如MongoDB 4.0+）。
 *   **代表**：MongoDB, Firestore, CouchDB。
 *   **优点**：模式灵活、适合对象式数据、查询能力强。
 *   **适用场景**：Web应用后端、内容管理、产品目录。
 
-### 列族数据库 (Wide-Column Databases)
+### Wide-Column Databases
 *   **数据模型**：数据按行和列组织，但同一张表中的行可以有不同的列。
 *   **工作原理**：使用**分区键**决定数据存储在哪个节点，**聚类键**用于分区内排序。采用LSM树设计，优化写入性能。
 *   **代表**：Cassandra, HBase, ScyllaDB。
 *   **优点**：为**海量水平扩展**而生，写入性能极高，高可用性。
 *   **适用场景**：时序数据、事件日志、IoT传感器数据。
 
-### 图数据库 (Graph Databases)
+### Graph Databases
 *   **数据模型**：数据表示为**节点**（实体）和**边**（关系），边有方向和属性。
 *   **工作原理**：节点直接存储指向相邻节点的引用，可以高效地**遍历关系**，无需像SQL那样进行多次JOIN。
 *   **代表**：Neo4j, Amazon Neptune, JanusGraph。
@@ -576,7 +684,7 @@ Choosing a database involves deciding between relational and non-relational mode
 *   **选择列族数据库**：如果需要处理**海量写入**，数据是**时序、事件日志或传感器数据**，且希望有高节点可用性和容错能力。
 *   **选择图数据库**：如果**数据点之间的关系**和数据本身一样重要，需要**遍历连接**（如基于购买模式的推荐），且查询涉及**可变深度遍历**（在SQL中需要多次昂贵JOIN）。
 
-## RDBMS（关系型数据库）
+## RDBMS (Relational Database)
 
 传统的关系型数据库（如 MySQL, PostgreSQL, Oracle）强在事务、一致性和复杂查询。但当数据量或并发量达到单机瓶颈时，不能简单地“加机器”，而需要采用以下五种策略：
 
@@ -601,7 +709,7 @@ Choosing a database involves deciding between relational and non-relational mode
 
 ## five caching strategies
 
-### 1. Cache-Aside (旁路缓存 / Lazy Loading)
+### 1. Cache-Aside (Lazy Loading)
 这是最常用的策略，核心是**按需缓存**。应用程序负责管理缓存，数据仅在**缓存未命中 (Cache Miss)** 时，才从数据库加载并写入缓存。
 *   **流程**：应用先查缓存，命中则返回；未命中则查数据库，再将结果写入缓存。
 *   **优点**：**高容错性**（缓存故障不影响系统运行）、灵活性高（可缓存任意数据结构）。
@@ -610,7 +718,7 @@ Choosing a database involves deciding between relational and non-relational mode
 
 ![cache_aside](_res/cache_aside.png)
 
-### 2. Read-Through (读穿透)
+### 2. Read-Through
 与 Cache-Aside 类似，但**缓存层本身负责**从数据库加载数据，应用只需与缓存交互。
 *   **优点**：简化应用代码，逻辑由缓存层统一处理。
 *   **缺点**：实现复杂，需确保缓存平台支持；**难以控制哪些数据被缓存**，可能缓存无用数据。
@@ -627,7 +735,7 @@ Choosing a database involves deciding between relational and non-relational mode
 
 
 
-### 3. Write-Through (写穿透)
+### 3. Write-Through
 写入时**同步更新缓存和数据库**，两者都成功才算完成。
 *   **优点**：**强一致性**，缓存与数据库数据始终保持同步。
 *   **缺点**：**写入性能较低**（需等待双重写入）；可能缓存大量**只写不读**的“冷数据”，浪费资源。
@@ -635,7 +743,7 @@ Choosing a database involves deciding between relational and non-relational mode
 
 ![write_through](_res/write_through.png)
 
-### 4. Write-Back (写回 / Write-Behind)
+### 4. Write-Back (Write-Behind)
 写入时**只更新缓存**，随后**异步地**将数据同步到数据库。
 *   **优点**：**写入性能极高**，大幅降低数据库压力。
 *   **缺点**：**数据不一致风险**（缓存未同步前，数据库是旧数据）；若缓存故障，**可能丢失未同步的数据**。
@@ -643,7 +751,7 @@ Choosing a database involves deciding between relational and non-relational mode
 
 ![write_behind](_res/write_behind.png)
 
-### 5. Write-Around (绕写)
+### 5. Write-Around
 写入时**直接写数据库**，**绕过缓存**。仅当后续有读取请求时，才将数据加载到缓存中。
 *   **优点**：避免缓存被**只写不读**的数据污染。
 *   **缺点**：首次读取数据时会有**缓存未命中**，产生延迟。
@@ -728,3 +836,325 @@ Redis 有下列附加功能：
 | **Application Caching** | 应用层专用缓存服务 | 缓存业务数据、查询结果、会话 | Redis、Memcached |
 | **Database Caching** | 数据库内部 | 缓存磁盘数据页，减少 I/O | MySQL Buffer Pool |
 
+# Asynchronism
+
+designing a system so that operations do not have to complete in a strict sequence before moving on. 
+
+Instead of waiting for a slow task to finish, the system can *queue* it up and continue handling other work.
+
+![asynchronism](_res/asynchronism.png)
+
+异步工作流有助于减少那些原本顺序执行的请求时间。它们可以通过提前进行一些耗时的工作来帮助减少请求时间，比如定期汇总数据。
+
+
+## Message Queue
+
+消息队列接收，保留和传递消息。如果按顺序执行操作太慢的话，你可以使用有以下工作流的消息队列：
+
+- 应用程序将作业发布到队列，然后通知用户作业状态
+- 一个 worker 从队列中取出该作业，对其进行处理，然后显示该作业完成
+
+不去阻塞用户操作，作业在后台处理。在此期间，客户端可能会进行一些处理使得看上去像是任务已经完成了。例如，如果要发送一条推文，推文可能会马上出现在你的时间线上，但是可能需要一些时间才能将你的推文推送到你的所有关注者那里去。
+
+- **Redis** 是一个令人满意的简单的消息代理，但是消息有可能会丢失。
+- **RabbitMQ** 很受欢迎但是要求你适应 [AMQP](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol) 协议并且管理你自己的节点。
+- **Amazon SQS** 是被托管的，但可能具有高延迟，并且消息可能会被传送两次。
+
+## Task Queue
+
+任务队列接收任务及其相关数据，运行它们，然后传递其结果。 它们可以支持调度，并可用于在后台运行计算密集型作业。
+
+## Back pressure
+
+Instead of letting a queue or buffer grow unbounded, the system slows down or rejects new work until the backlog clears.
+
+如果队列开始明显增长，那么队列大小可能会超过内存大小，导致高速缓存未命中，磁盘读取，甚至性能更慢。[背压](https://en.wikipedia.org/wiki/Back_pressure) 可以通过限制队列大小来帮助我们，从而为队列中的作业保持高吞吐率和良好的响应时间。一旦队列填满，客户端将得到服务器忙或者 HTTP 503 状态码，以便稍后重试。客户端可以在稍后时间重试该请求，也许是[指数退避](https://en.wikipedia.org/wiki/Exponential_backoff)。
+
+## cons
+
+简单的计算和实时工作流等用例可能更适用于同步操作，因为引入队列可能会增加延迟和复杂性。
+
+# Idempotent Operation
+
+## Idempotence in Mathematics
+
+在数学中，一个函数 $f$ 是**幂等的（Idempotent）**，当且仅当：
+
+$$
+f(f(x)) = f(x)
+$$
+
+也就是说，**对同一个输入，无论应用一次还是多次，结果完全相同**。
+
+### Common Mathematical Examples
+
+- **绝对值函数**：  
+  $$
+  \text{abs}(x) = |x|
+  $$  
+  因为 $\text{abs}(\text{abs}(x)) = \text{abs}(x)$，所以绝对值是幂等的。
+
+## From Mathematics to Computer Science
+
+在数学中，幂等性描述的是**纯函数**——没有副作用，只根据输入返回输出。
+
+但在计算机科学中，操作通常带有**副作用**：写数据库、扣款、发消息、修改文件。这时幂等性的含义变成：
+
+> **对系统状态而言，执行一次和执行多次，最终状态相同，且不会产生额外的副作用。**
+
+数学中的 $f(f(x)) = f(x)$ 对应到计算机中就是：
+- 第一次执行：状态从 $S$ 变为 $S'$。
+- 第二次执行：状态仍然是 $S'$，不会变成 $S''$。
+- 不会重复扣款、重复发短信、重复创建订单。
+
+## Why Idempotence Matters
+
+网络不可靠，客户端可能超时重试。如果操作不是幂等的，重试就会导致：
+- 重复扣款
+- 重复下单
+- 重复发送消息
+- 重复创建资源
+
+**幂等操作**保证：即使请求重复到达，系统最终状态也只反映一次操作的效果。
+
+## Idempotence in HTTP Methods
+
+HTTP 方法的幂等性约定，本质上是数学幂等性在协议层的体现：
+
+| 方法 | 幂等 | 数学类比 |
+|---|---|---|
+| GET | ✅ | 只读，类似恒等函数 |
+| PUT | ✅ | 多次设置同一资源，结果相同 |
+| DELETE | ✅ | 多次删除，资源最终都不存在 |
+| POST | ❌ | 类似 $f(x) = x + 1$，每次创建新资源 |
+| PATCH | ❌ | 取决于实现，通常不幂等 |
+
+注意：幂等不代表返回相同的状态码。比如 DELETE 第一次返回 204，第二次返回 404，但服务器状态不变，仍是幂等的。
+
+## Key to Implementation: Idempotency Keys
+
+在 API 中，常用 **Idempotency-Key** 实现幂等：
+
+1. 客户端为每次操作生成唯一 UUID。
+2. 服务端记录已处理的 Key 和对应的响应。
+3. 收到相同 Key 的请求时，直接返回之前的结果，不再执行操作。
+
+这相当于在计算机中构造了一个“幂等函数”：  
+
+$$
+\text{process}(key, request) = \text{结果}
+$$  
+
+无论调用多少次，只要 $key$ 相同，系统状态和返回结果都不变。
+
+# Communication
+
+Communication in a distributed system covers the protocols and methods that different components use to exchange data with each other. 
+- HTTP-based APIs
+- remote procedure calls(RPC)
+- message-based protocols
+
+在分布式系统中，服务之间需要交换数据。通信方式的选择直接影响**性能、可维护性和扩展性**
+
+## 底层协议：HTTP、TCP、UDP
+
+这三个是网络通信的基础协议，图中用虚线连接到“Communication”，表示它们是通信的底层支撑。
+
+| 协议 | 层级 | 特点 | 典型用途 |
+|---|---|---|---|
+| **TCP** | 传输层 | 面向连接、可靠、有序、有流量控制 | Web、文件传输、数据库连接 |
+| **UDP** | 传输层 | 无连接、不可靠、低延迟、开销小 | 视频流、游戏、DNS、实时通信 |
+| **HTTP** | 应用层 | 基于 TCP，请求-响应模型，无状态 | Web API、网页、REST |
+
+- **TCP** 保证数据不丢、不重、按序到达，但延迟较高。
+- **UDP** 不保证可靠，但速度快，适合能容忍丢包的场景。
+- **HTTP** 建立在 TCP 之上，是 Web 最常用的应用层协议。
+
+## 上层通信风格/框架 overview ：RPC、gRPC、REST、GraphQL
+
+在底层协议之上构建的 **API 设计风格** 或 **通信框架**，决定服务之间如何调用和交换数据。
+
+| 技术 | 全称 | 特点 | 适用场景 |
+|---|---|---|---|
+| **RPC** | Remote Procedure Call | 像调用本地函数一样调用远程服务，通常二进制、高效 | 内部服务间高性能调用 |
+| **gRPC** | Google RPC | 基于 HTTP/2 + Protobuf，支持流式、双向通信，高性能 | 微服务、跨语言、低延迟 |
+| **REST** | Representational State Transfer | 基于 HTTP，资源导向，使用 GET/POST/PUT/DELETE，无状态 | 公开 API、Web 服务 |
+| **GraphQL** | Graph Query Language | 客户端按需查询，一次请求获取多个资源，强类型 | 前端灵活获取数据、聚合 API |
+
+- **RPC** 是一种思想，gRPC 是它的现代实现。
+- **REST** 是 Web 上最流行的 API 风格，简单、通用。
+- **GraphQL** 解决 REST 中“过度获取”或“多次请求”的问题，由客户端决定返回哪些字段。
+
+## Relationship
+
+```text
+Communication
+├── 底层协议
+│   ├── TCP
+│   ├── UDP
+│   └── HTTP（基于 TCP）
+└── 上层通信风格/框架
+    ├── RPC / gRPC（通常基于 HTTP/2 或 TCP）
+    ├── REST（基于 HTTP）
+    └── GraphQL（通常基于 HTTP）
+```
+
+## remote procedure call(RPC)
+
+![RPC](_res/RPC.png)
+
+在 RPC 中，客户端会去调用另一个地址空间（通常是一个远程服务器）里的方法。调用代码看起来就像是调用的是一个本地方法，客户端和服务器交互的具体过程被抽象。
+
+RPC 是一个“请求-响应”协议：
+
+- 客户端程序 —— 调用客户端存根程序。就像调用本地方法一样，参数会被压入栈中。
+- 客户端 stub 程序 —— 将请求过程的 id 和参数打包进请求信息中。
+- 客户端通信模块 —— 将信息从客户端发送至服务端。
+- 服务端通信模块 —— 将接受的包传给服务端存根程序。
+- 服务端 stub 程序 —— 将结果解包，依据过程 id 调用服务端方法并将参数传递过去。
+
+RPC 调用示例：
+
+```http
+GET /someoperation?data=anId
+
+POST /anotheroperation
+{
+  "data":"anId";
+  "anotherdata": "another value"
+}
+````
+
+### cons
+- RPC 客户端与服务实现捆绑地很紧密。
+- 一个新的 API 必须在每一个操作或者用例中定义。
+- RPC 很难调试。
+- 你可能没办法很方便的去修改现有的技术。
+
+## Representational State Transfer(REST)
+
+REST 是一种强制的客户端/服务端架构设计模型，客户端基于服务端管理的一系列资源操作。服务端提供修改或获取资源的接口。所有的通信必须是**无状态和可缓存的**。
+
+RESTful 接口有四条规则：
+- 标志资源 (HTTP 里的 URI) —— 无论什么操作都使用同一个 URI。
+- 表示的改变 (HTTP 的动作) —— 使用动作, headers 和 body。
+- 可自我描述的错误信息 (HTTP 中的 status code) —— 使用状态码，不要重新造轮子。
+- HATEOAS (HTTP 中的 HTML 接口) —— 你的 web 服务器应该能够通过浏览器访问。
+
+REST 请求的例子：
+
+```http
+GET /someresources/anId
+
+PUT /someresources/anId
+{"anotherdata": "another value"}
+````
+
+REST 关注于暴露数据。它减少了客户端／服务端的耦合程度，经常用于公共 HTTP API 接口设计。
+
+# Performance Antipatterns
+
+反模式是指那些**一开始看起来合理、甚至像是好主意，但在实际生产环境中会导致性能下降、资源浪费、系统不稳定或难以扩展的常见错误设计或开发习惯。**
+
+## 数据与数据库类
+
+### Improper Instantiation（不当实例化）
+*   **问题**：在代码中频繁创建昂贵的对象（如数据库连接、HTTP 客户端、线程池），而不是复用它们。
+*   **后果**：频繁的垃圾回收（GC）、连接耗尽、系统开销剧增。
+*   **解决**：使用连接池、单例模式，或者将重对象提升到循环外部。
+
+### Monolithic Persistence（单体持久化）
+*   **问题**：不管数据是什么类型，全部塞进同一种数据库（比如所有数据都放关系型数据库，甚至全塞在一个库的一个表里）。
+*   **后果**：数据库成为严重瓶颈，读写互相竞争，难以扩展。
+*   **解决**：多语言持久化（Polyglot Persistence）。根据数据特点选择：关系型、NoSQL（文档、键值、图）、搜索引擎、时序数据库等。
+
+### Busy Database（忙碌数据库）
+*   **问题**：把大量的业务逻辑、复杂计算、数据转换都写进数据库的存储过程或 SQL 中执行。
+*   **后果**：数据库 CPU 和内存被迅速耗尽，影响所有其他查询，且难以水平扩展。
+*   **解决**：将计算逻辑移到应用层（无状态服务更容易扩展），数据库只负责基础的 CRUD 和索引查询。
+
+### Extraneous Fetching（多余的数据获取）
+*   **问题**：查询时获取了大量不需要的数据（例如 `SELECT *`，或者 N+1 查询），然后在应用层过滤。
+*   **后果**：网络带宽浪费、内存占用高、数据库 I/O 压力大。
+*   **解决**：按需查询（只 `SELECT` 需要的列），使用分页，解决 N+1 问题（使用 JOIN 或批量查询）。
+
+## 计算与资源类
+
+### Noisy Neighbor（吵闹邻居）
+*   **问题**：在共享基础设施（如多租户云环境、同一台服务器上的多个微服务）中，一个服务过度消耗 CPU、内存或 I/O，导致其他服务被拖垮。
+*   **后果**：其他正常服务出现延迟、超时甚至崩溃。
+*   **解决**：资源隔离（容器、VM）、设置资源限制（cgroups/K8s limits）、限流（Rate Limiting）、熔断。
+
+### Synchronous I/O（同步 I/O）
+*   **问题**：在等待网络请求、数据库查询或文件读取时，阻塞当前线程。
+*   **后果**：线程被死死卡住，无法处理其他请求，吞吐量极低。
+*   **解决**：使用异步 I/O（如 Python 的 `asyncio`、Node.js、Java 的 CompletableFuture）、响应式编程、或协程。
+
+### Busy Frontend（忙碌前端）
+*   **问题**：在客户端（浏览器/移动端）执行繁重的计算任务，或者让前端长时间等待阻塞式请求。
+*   **后果**：界面卡顿、无响应、用户体验极差。
+*   **解决**：将重计算移入后端或 Web Worker，前端采用异步请求，使用骨架屏优化体验。
+
+### 三、 网络与通信类
+
+### Chatty I/O（话痨 I/O）
+*   **问题**：为了完成一个业务，发起大量细碎的网络请求，而不是合并成一次批量请求。
+*   **后果**：网络延迟（RTT）累加，导致整体响应时间极长。
+*   **解决**：批量处理（Batching）、合并 API、使用 GraphQL 减少请求次数、数据聚合。
+
+### Retry Storm（重试风暴）
+*   **问题**：当某个下游服务变慢或不可用时，大量上游服务在短时间内疯狂重试，导致下游服务被彻底压垮（类似 DDoS）。
+*   **后果**：服务雪崩，整个系统瘫痪。
+*   **解决**：**指数退避（Exponential Backoff） + 抖动（Jitter）**，设置最大重试次数，配合**熔断器（Circuit Breaker）**。
+
+## 缓存与架构类
+
+### No Caching（无缓存）
+*   **问题**：对于频繁读取但很少变化的数据，每次请求都重新计算或从数据库拉取。
+*   **后果**：数据库压力大，响应慢，成本高。
+*   **解决**：引入缓存层（本地缓存、Redis、CDN），并制定合理的缓存失效（TTL）策略。
+
+# Additional Content
+
+## 2 的次方表
+
+````text
+Power           Exact Value         Approx Value        Bytes
+---------------------------------------------------------------
+7                             128
+8                             256
+10                           1024   1 thousand           1 KB
+16                         65,536                       64 KB
+20                      1,048,576   1 million            1 MB
+30                  1,073,741,824   1 billion            1 GB
+32                  4,294,967,296                        4 GB
+40              1,099,511,627,776   1 trillion           1 TB
+````
+
+## 每个程序员都应该知道的延迟数
+
+```text
+Latency Comparison Numbers
+--------------------------
+L1 cache reference                           0.5 ns
+Branch mispredict                            5   ns
+L2 cache reference                           7   ns                      14x L1 cache
+Mutex lock/unlock                           25   ns
+Main memory reference                      100   ns                      20x L2 cache, 200x L1 cache
+Compress 1K bytes with Zippy            10,000   ns       10 us
+Send 1 KB bytes over 1 Gbps network     10,000   ns       10 us
+Read 4 KB randomly from SSD*           150,000   ns      150 us          ~1GB/sec SSD
+Read 1 MB sequentially from memory     250,000   ns      250 us
+Round trip within same datacenter      500,000   ns      500 us
+Read 1 MB sequentially from SSD*     1,000,000   ns    1,000 us    1 ms  ~1GB/sec SSD, 4X memory
+Disk seek                           10,000,000   ns   10,000 us   10 ms  20x datacenter roundtrip
+Read 1 MB sequentially from 1 Gbps  10,000,000   ns   10,000 us   10 ms  40x memory, 10X SSD
+Read 1 MB sequentially from disk    30,000,000   ns   30,000 us   30 ms 120x memory, 30X SSD
+Send packet CA->Netherlands->CA    150,000,000   ns  150,000 us  150 ms
+
+Notes
+-----
+1 ns = 10^-9 seconds
+1 us = 10^-6 seconds = 1,000 ns
+1 ms = 10^-3 seconds = 1,000 us = 1,000,000 ns
+```
