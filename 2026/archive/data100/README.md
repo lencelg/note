@@ -1,1 +1,1 @@
-note from [here](https://github.com/willtholke/Data100)
+refer to high quality note from [willtholke/Data100](https://github.com/willtholke/Data100)

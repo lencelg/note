@@ -4,7 +4,31 @@ title: note of modern cpp
 resource: https://changkun.de/modern-cpp/
 ---
 
-[TOC]
+- [PS](#ps)
+- [Introduction](#introduction)
+  - [nullptr](#nullptr)
+  - [constexpr](#constexpr)
+  - [if/switch 变量声明强化](#ifswitch-变量声明强化)
+  - [std::initializer\_list](#stdinitializer_list)
+  - [structured bindings](#structured-bindings)
+  - [auto, decltype](#auto-decltype)
+  - [if constexpr](#if-constexpr)
+  - [using](#using)
+  - [非模板类型推导](#非模板类型推导)
+  - [委托构造](#委托构造)
+  - [继承构造](#继承构造)
+  - [inline variable](#inline-variable)
+  - [constexpr lambda](#constexpr-lambda)
+  - [static\_assert](#static_assert)
+  - [auto\&\&](#auto)
+  - [static\_cast](#static_cast)
+- [run time](#run-time)
+  - [lambada](#lambada)
+  - [std::function](#stdfunction)
+  - [std::bind and std::placeholder](#stdbind-and-stdplaceholder)
+  - [rlvaue, xvalue, lvalue](#rlvaue-xvalue-lvalue)
+    - [完美转发](#完美转发)
+- [other](#other)
 
 # PS 
 

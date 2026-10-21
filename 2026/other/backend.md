@@ -45,15 +45,15 @@ Backend development focuses on the server-side logic of a web application, handl
 
 ## 后端与前端开发：有何区别？
 
-| 维度 | 前端（Frontend） | 后端（Backend） |
-|------|------------------|------------------|
-| **定义** | 用户能看到和操作的一切 | 用户看不到的一切 |
-| **关注点** | 表现层（Presentation Layer） | 数据访问层（Data Access Layer） |
-| **运行位置** | 浏览器/客户端 | 服务器 |
-| **核心职责** | 用户界面、交互、动画 | 业务逻辑、数据存储、API |
-| **主要技术** | HTML、CSS、JavaScript | Java、Python、Node.js、数据库 |
-| **性能关注** | 加载速度、渲染性能 | 吞吐量、延迟、可扩展性 |
-| **安全关注** | XSS、CSRF | SQL注入、认证授权、数据加密 |
+| 维度       | 前端（Frontend）            | 后端（Backend）              |
+| -------- | ----------------------- | ------------------------ |
+| **定义**   | 用户能看到和操作的一切             | 用户看不到的一切                 |
+| **关注点**  | 表现层（Presentation Layer） | 数据访问层（Data Access Layer） |
+| **运行位置** | 浏览器/客户端                 | 服务器                      |
+| **核心职责** | 用户界面、交互、动画              | 业务逻辑、数据存储、API            |
+| **主要技术** | HTML、CSS、JavaScript     | Java、Python、Node.js、数据库  |
+| **性能关注** | 加载速度、渲染性能               | 吞吐量、延迟、可扩展性              |
+| **安全关注** | XSS、CSRF                | SQL注入、认证授权、数据加密          |
 
 ## 后端开发的核心职责
 
@@ -92,12 +92,12 @@ Backend development focuses on the server-side logic of a web application, handl
 
 后端是系统的“安全卫士”。常见安全措施包括：
 
-| 安全领域 | 技术手段 |
-|----------|----------|
+| 安全领域 | 技术手段                      |
+| ---- | ------------------------- |
 | 身份认证 | JWT、OAuth2、Session/Cookie |
-| 权限控制 | RBAC、ACL、API网关鉴权 |
-| 数据安全 | HTTPS、数据加密（AES）、SQL注入防护 |
-| 防攻击 | 防XSS、CSRF、DDoS、限流熔断 |
+| 权限控制 | RBAC、ACL、API网关鉴权          |
+| 数据安全 | HTTPS、数据加密（AES）、SQL注入防护   |
+| 防攻击  | 防XSS、CSRF、DDoS、限流熔断       |
 
 ## 后端技术栈全景图
 
@@ -105,13 +105,13 @@ Backend development focuses on the server-side logic of a web application, handl
 
 ### 编程语言
 
-| 语言 | 特点 | 典型应用场景 |
-|------|------|-------------|
-| Java | 稳定、生态强大、企业级首选 | Spring Boot、微服务、金融系统 |
-| Python | 语法简洁、AI/数据分析强 | Django/Flask、爬虫、机器学习 |
-| Node.js | JS全栈、高并发、I/O密集 | Express、Koa、实时应用 |
-| Go | 高性能、并发强、编译快 | 云原生、微服务、高并发系统 |
-| PHP | Web建站快、生态大 | WordPress、Laravel |
+| 语言      | 特点             | 典型应用场景               |
+| ------- | -------------- | -------------------- |
+| Java    | 稳定、生态强大、企业级首选  | Spring Boot、微服务、金融系统 |
+| Python  | 语法简洁、AI/数据分析强  | Django/Flask、爬虫、机器学习 |
+| Node.js | JS全栈、高并发、I/O密集 | Express、Koa、实时应用     |
+| Go      | 高性能、并发强、编译快    | 云原生、微服务、高并发系统        |
+| PHP     | Web建站快、生态大     | WordPress、Laravel    |
 
 ### 核心技能领域
 
@@ -841,6 +841,7 @@ Provides large distributed hash table across multiple machines with LRU eviction
 | 线程模型 | 单线程（6.0+ 网络 I/O 多线程） | 多线程 |
 | 适用场景 | 缓存、队列、排行榜、会话等 | 纯缓存 |
 
+
 ## HTTP Caching
 
 [Everything you need to know about HTTP Caching](https://www.youtube.com/watch?v=HiBDZgTNpXY)
@@ -902,13 +903,13 @@ agents and models are different
 
 ## In-context learning
 
-| Type | Description |
-| :--- | :--- |
-| **Zero-shot** | No examples; relies only on the instruction |
-| **One-shot** | One example; useful for showing expected format or structure |
-| **Few-shot** | Few examples; helps guide model behavior with demonstrations |
+| Type                       | Description                                                                  |
+| :------------------------- | :--------------------------------------------------------------------------- |
+| **Zero-shot**              | No examples; relies only on the instruction                                  |
+| **One-shot**               | One example; useful for showing expected format or structure                 |
+| **Few-shot**               | Few examples; helps guide model behavior with demonstrations                 |
 | **Chain-of-Thought (CoT)** | Few examples with reasoning steps; improves logical or step-by-step thinking |
-| **ReAct** | Combines reasoning (CoT) with tool use (actions); enables decision + action |
+| **ReAct**                  | Combines reasoning (CoT) with tool use (actions); enables decision + action  |
 
 ## Embeddings
 
@@ -946,3 +947,345 @@ other cli agents
 - deepseek hardness
 - pi agent
 - opencode
+
+## Prompt
+
+refer to [Prompt engineering](./prompt_engineering.md)
+
+## Agents
+
+refer to [agents](./agents.md)
+## Mcp
+MCP (Model Context Protocol) is an open-source standard for connecting AI applications to external systems.
+
+Using MCP, AI applications like Claude or ChatGPT can connect to data sources (e.g. local files, databases), tools (e.g. search engines, calculators) and workflows (e.g. specialized prompts)—enabling them to access key information and perform tasks.
+
+Think of MCP like a USB-C port for AI applications. Just as USB-C provides a standardized way to connect electronic devices, MCP provides a standardized way to connect AI applications to external systems.
+
+![mcp](./_res/mcp.png)
+
+MCP can have a range of benefits.
+- **Developers**: MCP reduces development time and complexity when building, or integrating with, an AI application or agent.
+- **AI applications or agents**: MCP gives them access to an ecosystem of data sources, tools and apps, which enhances their capabilities and improves the end-user experience.
+- **End-users**: MCP results in more capable AI applications or agents that can access user data and take actions on the user’s behalf when necessary.
+
+## Skills
+
+Skills能是包含指令、脚本和资源的文件夹，agents会动态加载这些文件夹来提高特定任务的性能。
+
+Skills are simple to create - just a folder with a `SKILL.md` file containing YAML frontmatter and instructions.
+
+a template skill as follow:
+
+```text
+---
+name: my-skill-name
+description: A clear description of what this skill does and when to use it
+---
+
+# My Skill Name
+[Add your instructions here that Claude will follow when this skill is active] ## Examples
+- Example usage 1
+- Example usage 2
+
+## Guidelines
+- Guideline 1
+- Guideline 2
+```
+
+# Integration Patterns
+
+集成模式是针对连接不同软件系统或应用程序时常见问题的可重用解决方案。说白了就是模板
+
+<table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+  <thead>
+    <tr>
+      <th colspan="2" style="background-color: #0b0f45; color: #ffffff; padding: 10px; text-align: center; font-weight: bold; font-size: 16px; border: 1px solid #444;">Patterns in this Article</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Direct Prompting</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        将提示词直接从用户发送给基础大语言模型（Foundation LLM）
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Embeddings</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        将大数据块转换为数值向量，以便彼此靠近的嵌入（embeddings）代表相关概念
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Evals</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        在特定任务的上下文中评估大语言模型（LLM）的响应
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Fine Tuning</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        对预训练的大语言模型进行额外训练，以增强其在特定上下文中的知识库
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Guardrails</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        使用单独的大语言模型调用，以避免向大语言模型输入危险内容，或对其结果进行清洗
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Hybrid Retriever</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        将使用嵌入的搜索与其他搜索技术相结合
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Query Rewriting</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        使用大语言模型为一个查询创建几个替代表述，并使用所有替代方案进行搜索
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Reranker</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        根据有用性对一组检索到的文档片段进行排序，并将其中最好的发送给大语言模型
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 30%; vertical-align: top;">
+        <a href="#" style="color: #333; text-decoration: underline;">Retrieval Augmented<br>Generation (RAG)</a>
+      </td>
+      <td style="border: 1px solid #b0b0b0; padding: 12px 15px; width: 70%; vertical-align: top; line-height: 1.4;">
+        检索相关的文档片段，并在向大语言模型发送提示词时将其包含在内
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+a rag template may look like this:
+
+```text
+User prompt: {{user_query}}
+
+Relevant context: {{retrieved_text}}
+
+Instructions:
+
+1. Provide a comprehensive, accurate, and coherent response to the user query, using the provided context.
+2. If the retrieved context is sufficient, focus on delivering precise and relevant information.
+3. If the retrieved context is insufficient, acknowledge the gap and suggest potential sources or steps for obtaining more information.
+4. Avoid introducing unsupported information or speculation.
+```
+
+## CI/CD
+
+Continuous integration (CI) ensures that code changes are validated early and often through automated builds and tests, reducing errors and speeding up development.
+
+**CI/CD** 是现代软件开发中的核心实践，全称是 **Continuous Integration（持续集成）** 和 **Continuous Delivery/Deployment（持续交付/持续部署）**。
+
+###  CI：持续集成 (Continuous Integration)
+
+过去，开发者各自写代码，几个月后才合并在一起，结果发现冲突无数、Bug满天飞（所谓的“集成地狱”）。
+*   开发者每天多次把代码推送到共享仓库（如 GitHub）。
+*   每次推送，系统都会**自动触发**以下流程：
+    1.  **拉取代码**。
+    2.  **编译构建**（Build）。
+    3.  **运行自动化测试**（单元测试、集成测试）。
+    4.  **代码质量扫描**（检查代码规范、安全漏洞）。
+*   **结果**：如果测试没过，系统会立刻通知开发者，把 Bug 扼杀在摇篮里。
+
+### CD：持续交付 (Continuous Delivery) vs 持续部署 (Continuous Deployment)
+
+CD 是 CI 的下一步，确保代码随时可以安全地上线。
+
+*   **持续交付（Delivery）**：代码通过测试后，会自动打包成可部署的版本（比如 Docker 镜像），并**自动部署到测试环境或预发环境**。但是，要发布到真实的**生产环境**，通常需要**人工点击一次“确认发布”按钮**（为了业务安全）。
+*   **持续部署（Deployment）**：比持续交付更进一步。只要代码通过了所有自动化测试，**全自动地直接发布到生产环境**，完全不需要人工干预。这是很多顶尖互联网公司追求的终极目标。
+
+### CI/CD importance
+
+1.  **减少人工错误**：人手动打包、上传服务器很容易漏掉文件或敲错命令，机器永远不会出错。
+2.  **加快发布速度**：从原来的“一个月发布一次”，变成现在的“一天发布几十次”。
+3.  **快速回滚**：如果新版本出问题，流水线可以一键回退到上一个正常的版本。
+4.  **开发者专注写代码**：不用管怎么部署，提交代码就完事了。
+
+###  Common CI/CD tools
+*   **GitHub Actions**：目前最流行的工具之一，与 GitHub 深度集成
+*   **GitLab CI/CD**：GitLab 自带的一套的流水线系统。
+*   **Jenkins**：老牌、开源、插件极其丰富的自动化服务器。
+*   **CircleCI / Travis CI**：流行的云端 CI 服务。
+*   **Argo CD**：目前 Kubernetes（K8s）生态中最火的持续部署工具（GitOps 模式）。
+
+# Testing
+
+Testing systematically evaluates software functionality, performance, and quality against requirements. Includes:
+- unit
+- integration
+- system
+- acceptance testing levels
+
+Test Automation Pyramid
+
+![](test_pyramid.png)
+
+## Unit Testing
+
+*   **是什么**：针对软件中**最小可测试单元**（通常是一个函数、一个方法或一个类）进行的测试。它是测试的最底层，通常由开发者在编写代码时同步完成。
+*   **特点**：运行速度极快；不需要依赖外部系统（数据库、网络等，通常会使用 Mock 技术来模拟）；完全隔离。
+*   **应用场景**：
+    *   测试一个计算订单总价的数学函数是否正确。
+    *   测试一个数据校验工具类是否能正确识别非法的邮箱格式。
+    *   在重构代码后，确保原有的基本逻辑没有被破坏。
+## Integration Testing
+*   **是什么**：将各个已经通过单元测试的模块组合起来，测试它们**之间的接口和交互**是否正常工作。它介于单元测试和系统测试之间，用来发现模块组合后产生的问题。
+*   **特点**：需要处理模块间的依赖关系，可能会连接真实的数据库或第三方 API（或者使用容器化技术模拟环境）。
+*   **应用场景**：
+    *   测试“用户注册模块”是否能把数据正确写入“数据库模块”。
+    *   测试前端应用发出的 API 请求，后端微服务是否能正确接收并返回数据（前后端联调）。
+    *   测试第三方支付网关（如支付宝接口）与本系统之间的数据交互。
+## Functional Testing
+*   **是什么**：也叫黑盒测试（Black-box Testing）。它不考虑软件内部代码是如何实现的，而是**根据业务需求文档**，从用户的角度出发，验证软件的功能是否符合预期。
+*   **特点**：关注输入和输出。给系统特定的输入，看系统是否返回正确的结果或表现出正确的行为。
+*   **应用场景**：
+    *   模拟真实用户在网页上点击“加入购物车”，验证商品数量是否增加 1。
+    *   输入错误的密码，验证系统是否提示“密码错误”并阻止登录。
+    *   测试表单提交后，用户是否收到确认邮件。
+    *   **适用对象**：QA（测试工程师）、产品经理。通常涉及端到端测试（E2E）、UI 自动化测试或人工手动测试。
+    *   **通俗比喻**：把整辆车组装好后，让试车员坐进去，点火、踩油门、打方向盘，测试这辆车开起来是不是真的能往前跑、能转弯。
+
+这三个环节通常在 CI/CD 流水线中自动依次执行：先跑单元测试，过了再跑集成测试，最后跑功能测试。
+
+# More about Database
+
+## Transactions
+
+[What is a Database Transaction? Be ACID compliant!](https://www.youtube.com/watch?v=wHUOeXbZCYA)
+
+[ACID Properties in Databases With Examples](https://www.youtube.com/watch?v=GAe5oB742dw)
+
+事务(Transactions)
+
+数据库事务是一系列作为原子单元执行的操作，以确保数据完整性。遵循*ACID*属性来确保可靠的并发操作和数据一致性：
+- 原子性(Atomic)（全有或全无）
+- 一致性(Consistency)（有效状态）
+- 隔离性(Isolation)（无干扰）
+- 持久性(Durability)（永久性更改）
+
+SQL Server 提供了非常直观的事务控制语句：
+
+```sql
+-- 开启事务
+BEGIN TRANSACTION;  -- 简写为 BEGIN TRAN
+
+BEGIN TRY
+    -- 执行一系列数据操作
+    UPDATE Accounts SET Balance = Balance - 100 WHERE AccountId = 1;
+    UPDATE Accounts SET Balance = Balance + 100 WHERE AccountId = 2;
+
+    -- 如果没有报错，提交事务（数据真正写入磁盘）
+    COMMIT TRANSACTION; 
+END TRY
+BEGIN CATCH
+    -- 如果发生任何错误，回滚事务（撤销所有未提交的更改）
+    ROLLBACK TRANSACTION;
+    
+    -- 可以在这里打印或记录错误信息
+    PRINT 'Transaction failed: ' + ERROR_MESSAGE();
+END CATCH;
+```
+
+*   **`BEGIN TRAN`**：标记事务的起点。
+*   **`COMMIT TRAN`**：标记事务成功结束，所有更改永久生效。
+*   **`ROLLBACK TRAN`**：撤销自 `BEGIN TRAN` 以来的所有更改。
+*   **`SAVE TRAN`**：设置保存点，允许部分回滚。
+
+import usage: `TRY...CATCH` 与 `XACT_ABORT`
+
+SQL Server 事务中**千万不能只写 BEGIN 和 COMMIT**，如果不处理错误，一旦中途报错，事务会一直处于“挂起（Open）”状态，导致表被**锁死**。
+
+强烈建议在事务开始前加上 `SET XACT_ABORT ON`：
+
+```sql
+SET XACT_ABORT ON; 
+```
+
+当设为 `ON` 时，如果 T-SQL 语句产生运行时错误，整个事务会自动回滚并终止。结合 `TRY...CATCH` 使用，可以最大程度避免死锁和锁表。
+
+---
+
+事务的隔离级别（Isolation Levels）
+
+SQL Server 通过锁（Locking）来实现隔离性。默认情况下，SQL Server 使用的是 **Read Committed**（读已提交）。
+
+可以按需设置隔离级别（在 `BEGIN TRAN` 之前执行）：
+
+```sql
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+```
+
+常见的级别及特性：
+*   **READ UNCOMMITTED**：允许读取未提交的数据（脏读）。虽然快，但不安全（对应 Hint：`WITH (NOLOCK)`）。
+*   **READ COMMITTED（默认）**：只能读取已提交的数据。但在读取时，其他试图修改该数据的事务会被**阻塞（Block）**。
+*   **REPEATABLE READ**：保证在事务结束前，读取过的数据不会被其他人修改。
+*   **SERIALIZABLE**：最高级别。完全隔离，不仅锁行，还会锁住范围，防止幻读。并发性能最差。
+*   **SNAPSHOT**：**现代高并发系统的主流选择**。使用行版本控制，读操作不需要加共享锁，因此**读操作不会阻塞写操作，写操作也不会阻塞读操作**。极大提升了并发能力（需在数据库级别开启）。
+
+
+# Containerization
+
+首先先区分容器和虚拟机, 它们的本质区别在于**是否包含完整的操作系统**：
+
+| 特性 | Linux 容器 (Docker 等) | 虚拟机 (VMware, KVM 等) |
+| :--- | :--- | :--- |
+| **虚拟化层级** | 操作系统层（OS Level） | 硬件层（Hardware Level） |
+| **操作系统内核** | **共享**宿主机的内核 | 每个 VM 包含**独立的**完整内核 |
+| **资源消耗** | 极低（MB 级别） | 较高（GB 级别） |
+| **启动速度** | 毫秒级 / 秒级 | 分钟级（需要启动 BIOS、内核、系统） |
+| **隔离性** | 进程级隔离（较弱） | 硬件级隔离（极强，像两台真电脑） |
+
+## Common container
+*   **Docker**：最著名的容器化平台。它让容器的创建、打包、分发变得极其简单（引入镜像 `Image` 的概念）。
+*   **Podman**：Docker 的开源替代品，特点是**无守护进程（Daemonless）**，更安全，普通用户也能运行容器。
+*   **containerd**：一个底层的容器运行时，现在 Kubernetes（K8s）默认用它来真正跑容器。
+*   **LXC / LXD**：最传统的 Linux 容器实现，更接近轻量级虚拟机。
+
+Linux 容器就是一种**轻量、高效、共享内核的隔离技术**。它把应用和运行环境打包在一起，彻底改变了软件的构建、测试和部署方式。你现在用的绝大多数互联网服务（包括你正在用的 AI 的后端），底层几乎都在成千上万的容器中运行。
+
+refer to [docker](./docker.md)
+
+# Message Brokers
+
+消息代理(Message Brokers)是一种软件，它使应用程序、系统和服务能够通信和交换信息——即使它们是用不同的语言编写的或在不同的平台上实现的——通过在正式消息协议之间翻译消息。
+
+消息代理是消息中间件或面向消息的中间件（MOM）解决方案中的软件模块。这种中间件为开发人员提供了一种标准化的方式来处理应用程序组件之间的数据流，使他们能够专注于其核心逻辑。它可以作为一个分布式通信层，允许跨越多个平台的应用程序进行内部通信。
+
+为了提供可靠的消息存储和保证交付，消息代理通常依赖于一个称为**消息队列**的子结构或组件，该组件存储和排序消息，直到消费应用程序可以处理它们。
+
+消息代理的工作流可以概括为：**生产者 → 代理（存储/路由） → 消费者**。IBM 的文章指出，代理通常会依赖内部的**消息队列（Queue）** 作为子结构，来临时存储和排序消息，直到消费者准备好处理。
+
+主要支持两种消息分发模式：
+
+1.  **点对点（Point-to-Point）**：**一对一的可靠投递**。消息被放入一个队列，**仅被一个**消费者接收和处理一次。适用于必须确保操作只执行一次的场景，如工资发放或金融交易
+2.  **发布/订阅（Publish/Subscribe）**：**一对多的广播**。生产者将消息发布到一个“主题（Topic）”，所有订阅了该主题的消费者都会收到一份副本。适用于事件通知场景，如航班状态更新
+
+常见的消息代理有：
+*   **RabbitMQ**：传统消息代理的代表, 基于 AMQP 协议，有**灵活的路由规则**（Direct/Topic/Fanout）和**极低的延迟（微秒级）** ，适合需要复杂路由的业务解耦和实时性要求高的场景（如支付回调）
+*   **Apache Kafka**：**分布式事件流平台**。高的吞吐量，采用“磁盘顺序写入+批量拉取”模式, 是大数据日志收集和实时流处理（如用户行为追踪、与 Flink/Spark 集成）的事实标准
+*   **Apache RocketMQ**：**金融级分布式消息中间件**。强调**事务完整性、严格顺序一致性和低延迟（亚毫秒级）**，支持定时/延迟消息，特别适配电商订单、秒杀、金融交易等复杂业务逻辑
+*   **Apache ActiveMQ**：JMS 实现，提供标准企业级消息服务，适合传统的分布式系统集成
