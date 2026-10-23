@@ -7,6 +7,7 @@ A  prompt is the input text or query provided to an AI model, such as a large la
 there are three primary way to structure the prompts
 
 ### Direct instructions
+
 **Direct instructions**: are clear and specific commands that tell the AI exactly what to do. These prompts are ideal for straightforward tasks where the user has a clear expectation of the output.
 
 The more detailed the instruction, the more likely the output will meet expectations.
@@ -33,7 +34,7 @@ Here, the AI has the freedom to decide what aspects of the universe to discuss, 
 
 Example
 
-```
+```text
 Translate this text into French: ‘Hello.’
 ```
 

@@ -82,8 +82,8 @@
   - [Idempotence in HTTP Methods](#idempotence-in-http-methods)
   - [Key to Implementation: Idempotency Keys](#key-to-implementation-idempotency-keys)
 - [Communication](#communication)
-  - [底层协议：HTTP、TCP、UDP](#底层协议httptcpudp)
-  - [上层通信风格/框架 overview ：RPC、gRPC、REST、GraphQL](#上层通信风格框架-overview-rpcgrpcrestgraphql)
+  - [Underlying Protocol：HTTP、TCP、UDP](#underlying-protocolhttptcpudp)
+  - [Framework overview ：RPC、gRPC、REST、GraphQL](#framework-overview-rpcgrpcrestgraphql)
   - [Relationship](#relationship)
   - [remote procedure call(RPC)](#remote-procedure-callrpc)
     - [cons](#cons-2)
@@ -98,7 +98,7 @@
     - [Noisy Neighbor（吵闹邻居）](#noisy-neighbor吵闹邻居)
     - [Synchronous I/O（同步 I/O）](#synchronous-io同步-io)
     - [Busy Frontend（忙碌前端）](#busy-frontend忙碌前端)
-    - [三、 网络与通信类](#三-网络与通信类)
+  - [网络与通信类](#网络与通信类)
     - [Chatty I/O（话痨 I/O）](#chatty-io话痨-io)
     - [Retry Storm（重试风暴）](#retry-storm重试风暴)
   - [缓存与架构类](#缓存与架构类)
@@ -726,15 +726,6 @@ Choosing a database involves deciding between relational and non-relational mode
 
 ![read_through](_res/read_through.png)
 
-
-
-
-
-
-
-
-
-
 ### 3. Write-Through
 写入时**同步更新缓存和数据库**，两者都成功才算完成。
 *   **优点**：**强一致性**，缓存与数据库数据始终保持同步。
@@ -846,7 +837,6 @@ Instead of waiting for a slow task to finish, the system can *queue* it up and c
 
 异步工作流有助于减少那些原本顺序执行的请求时间。它们可以通过提前进行一些耗时的工作来帮助减少请求时间，比如定期汇总数据。
 
-
 ## Message Queue
 
 消息队列接收，保留和传递消息。如果按顺序执行操作太慢的话，你可以使用有以下工作流的消息队列：
@@ -956,7 +946,7 @@ Communication in a distributed system covers the protocols and methods that diff
 
 在分布式系统中，服务之间需要交换数据。通信方式的选择直接影响**性能、可维护性和扩展性**
 
-## 底层协议：HTTP、TCP、UDP
+## Underlying Protocol：HTTP、TCP、UDP
 
 这三个是网络通信的基础协议，图中用虚线连接到“Communication”，表示它们是通信的底层支撑。
 
@@ -970,7 +960,7 @@ Communication in a distributed system covers the protocols and methods that diff
 - **UDP** 不保证可靠，但速度快，适合能容忍丢包的场景。
 - **HTTP** 建立在 TCP 之上，是 Web 最常用的应用层协议。
 
-## 上层通信风格/框架 overview ：RPC、gRPC、REST、GraphQL
+## Framework overview ：RPC、gRPC、REST、GraphQL
 
 在底层协议之上构建的 **API 设计风格** 或 **通信框架**，决定服务之间如何调用和交换数据。
 
@@ -1023,7 +1013,7 @@ POST /anotheroperation
   "data":"anId";
   "anotherdata": "another value"
 }
-````
+```
 
 ### cons
 - RPC 客户端与服务实现捆绑地很紧密。
@@ -1048,7 +1038,7 @@ GET /someresources/anId
 
 PUT /someresources/anId
 {"anotherdata": "another value"}
-````
+```
 
 REST 关注于暴露数据。它减少了客户端／服务端的耦合程度，经常用于公共 HTTP API 接口设计。
 
@@ -1095,7 +1085,7 @@ REST 关注于暴露数据。它减少了客户端／服务端的耦合程度，
 *   **后果**：界面卡顿、无响应、用户体验极差。
 *   **解决**：将重计算移入后端或 Web Worker，前端采用异步请求，使用骨架屏优化体验。
 
-### 三、 网络与通信类
+## 网络与通信类
 
 ### Chatty I/O（话痨 I/O）
 *   **问题**：为了完成一个业务，发起大量细碎的网络请求，而不是合并成一次批量请求。
