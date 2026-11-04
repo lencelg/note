@@ -1549,3 +1549,5 @@ Server Sent Events(SSE) 是基于 HTTP 协议来建立一条持久的**单向**�
 | **SSE**           | 单向 (Server -> Client) | HTTP        | 低  | 低        | 股票行情、新闻推送、通知    |
 | **Long Polling**  | 伪双向                   | HTTP        | 中  | 高        | 旧系统兼容、简单的实时消息   |
 | **Short Polling** | 伪双向                   | HTTP        | 高  | 极高       | 极小规模数据同步、后台定时任务 |
+
+

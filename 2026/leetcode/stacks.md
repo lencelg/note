@@ -239,3 +239,303 @@ private:
 [灵神题解](https://leetcode.cn/problems/largest-rectangle-in-histogram/solutions/2695467/dan-diao-zhan-fu-ti-dan-pythonjavacgojsr-89s7/)
 
 希望下次看到能够理解写出来吧
+
+# 150. 逆波兰表达式求值
+
+思路也很简单，直接上代码
+
+````cpp
+int evalRPN(vector<string>& tokens) {
+    stack<int> st;
+    for (size_t i = 0; i < tokens.size(); i++)
+    {
+        string s = tokens[i];
+
+        int num = 0;
+        auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), num);
+        if(ec == std::errc()){
+            st.push(num);
+            continue;
+        }
+
+        int b = st.top();
+        st.pop();
+        int a = st.top();
+        st.pop();
+        if(s == "+") st.push(a + b);
+        else if(s == "-") st.push(a - b);
+        else if(s == "*") st.push(a * b);
+        else st.push(a / b);
+    }
+    return st.top();
+}
+````
+
+````java
+public int evalRPN(String[] tokens) {
+    Stack<Integer> st = new Stack<>();        
+    for (String string : tokens) {
+        char c = string.charAt(0);
+        if(string.length() > 1 || Character.isDigit(c)){
+            st.push(Integer.parseInt(string));
+            continue;
+        }
+
+        int b = st.pop(), a = st.pop();
+        if(c == '+') st.push(a + b);
+        else if(c == '-') st.push(a - b);
+        else if(c == '*') st.push(a * b);
+        else st.push(a / b);
+    }
+    return st.pop();
+}
+````
+
+# 853. 车队
+
+这道题有点难度，鏖战一个多小时写出来了，我的想法是大根堆排序（key是position）来判断当前的车会不会被追上，但这个题单是关于stack的，于是思考怎么使用stack来解决这个问题
+
+```cpp
+int carFleet(int target, vector<int>& position, vector<int>& speed) {
+    priority_queue<pair<int, int>> pq;
+    for (size_t i = 0; i < position.size(); i++)
+    {
+        pq.push({position[i], speed[i]});
+    }
+    
+    int res = 0;
+    int prev_pos = -1, prev_speed = -1;
+    while (!pq.empty())
+    {
+        if(prev_pos == -1){
+            prev_pos = pq.top().first;
+            prev_speed = pq.top().second;
+            pq.pop();
+            continue;
+        }
+
+        int cur_pos = pq.top().first;
+        int cur_speed = pq.top().second;
+        pq.pop();
+
+        if(cur_speed < prev_speed){
+            res++;
+        }else{
+            double time = (prev_pos - cur_pos) / double(cur_speed - prev_speed) ;
+            if((prev_pos + time * prev_speed) > target) res++;
+            else continue;
+        }
+        prev_pos = cur_pos;
+        prev_speed = cur_speed;
+    }
+    return res + 1;
+    
+}
+```
+
+基于上一个版本可以做判断追车的优化
+
+```cpp
+int carFleet(int target, vector<int>& position, vector<int>& speed) {
+    priority_queue<pair<int, int>> pq;
+    for (size_t i = 0; i < position.size(); i++)
+    {
+        pq.push({position[i], speed[i]});
+    }
+
+    if(pq.empty()) return 0;
+
+    int res = 0;
+    double prev_time = double(target - minHeap.top().first) / minHeap.top().second;
+    pq.pop();
+    while (!pq.empty())
+    {
+        double cur_time = double(target - minHeap.top().first) / minHeap.top().second;
+
+        if(cur_time > prev_time){
+            prev_time = cur_time;
+            res++;
+        }
+        pq.pop();
+    }
+    return res + 1;
+}
+```
+
+于是这里就很明显是可以做一个单调栈来维护了，不过排序是升序的
+
+```cpp
+int carFleet(int target, vector<int>& position, vector<int>& speed) {
+    vector<pair<int, int>> record;
+    for (size_t i = 0; i < position.size(); i++)
+    {
+        record.push_back({position[i], speed[i]});
+    }
+
+    std::sort(record.begin(), record.end(), [](const pair<int, int>& a, const pair<int, int>& b) {
+        return a.first < b.first; 
+    });
+
+    stack<double> st;
+    for (size_t i = 0; i < record.size(); i++)
+    {
+        int p = record[i].first, s = record[i].second;
+        double t = 1.0 * (target - p) / s;
+
+        while(!st.empty() && t >= st.top()){
+            st.pop();
+        }
+        st.push(t);
+    }
+    return st.size(); 
+}
+```
+
+考虑到第一版的优化版，于是这里不需要使用一个stack来维护了，直接遍历就可以判断了
+
+```cpp
+    int carFleet(int target, vector<int>& position, vector<int>& speed) {
+        size_t n = position.size();
+        vector<pair<int, int>> record(n);
+        for (size_t i = 0; i < n; i++)
+        {
+            record[i] = {position[i], speed[i]};
+        }
+
+        std::sort(record.begin(), record.end(), [](const pair<int, int>& a, const pair<int, int>& b) {
+            return a.first > b.first; 
+        });
+
+        int res = 0;
+        double pt = 0;
+        for (size_t i = 0; i < n; i++)
+        {
+            double t = 1.0 * (target - record[i].first) / record[i].second;
+
+            if(t > pt){
+                res++;
+                pt = t;
+            }
+
+        }
+        return res;
+    }
+```
+
+# 735. 小行星碰撞
+
+碰撞规则已经给出来了，于是很自然的就知道要使用栈记录当前还存在的行星
+
+```cpp
+vector<int> asteroidCollision(vector<int>& asteroids) {
+    stack<int> st; 
+    for (size_t i = 0; i < asteroids.size(); i++)
+    {
+        int cur = asteroids[i];
+        if(!st.empty()){
+            if((st.top() < 0 && cur > 0) || (st.top() * cur > 0)){
+                st.push(cur);
+                continue;
+            }
+            while(!st.empty() && (st.top() * cur < 0) && abs(cur) > abs(st.top())){
+                st.pop();
+            }
+            if(!st.empty() && (st.top() * cur < 0) && abs(cur) == abs(st.top())){
+                st.pop();
+                continue;
+            }
+            if(!st.empty() && (st.top() * cur < 0) && abs(cur) < abs(st.top())) continue;
+        }
+        st.push(cur);
+    }
+
+    int size = static_cast<int>(st.size());
+    vector<int> res(size);
+    for (int i = size - 1; i >= 0; i--)
+    {
+        res[i] = st.top();
+        st.pop();
+    }
+    return res; 
+}
+```
+
+虽然逻辑都在但是感觉空间效率有点低，看了灵神的题解发现先站队写起来就很简洁，空间效率也更高。思路很不一样，受教了
+
+[735灵神题解](https://leetcode.cn/problems/asteroid-collision/solutions/3938065/yong-zhan-wei-hu-xiao-xing-xing-pythonja-llqqe)
+
+# 402. 移掉k个数字
+
+这道题的思维强度比较高，初见没写出来。
+
+[官方的题解](https://leetcode.cn/problems/remove-k-digits/solutions/484940/yi-diao-kwei-shu-zi-by-leetcode-solution)解释的不错
+
+```cpp
+string removeKdigits(string num, int k) {
+    string st;
+    
+    for (char digit : num) {
+        while (!st.empty() && k > 0 && st.back() > digit) {
+            st.pop_back();
+            k--;
+        }
+        st.push_back(digit);
+    }
+    
+    while (k > 0 && !st.empty()) {
+        st.pop_back();
+        k--;
+    }
+    
+    int start = 0;
+    while (start < st.size() && st[start] == '0') {
+        start++;
+    }
+    
+    string res = st.substr(start);
+    
+    return res.empty() ? "0" : res;
+}
+```
+
+# 496. 下一个更大的数字I
+
+很明显的单调栈，直接上代码
+
+```cpp
+vector<int> nextGreaterElement(vector<int>& nums1, vector<int>& nums2) {
+    stack<int> st; 
+    unordered_map<int, int> hp;
+
+    int n = static_cast<int>(nums2.size());
+    int r[n];
+
+    for (int i = n - 1; i >= 0; i--)
+    {
+        hp[nums2[i]] = i;
+        while(!st.empty() && nums2[st.top()] < nums2[i]){
+            st.pop();
+        }
+        if(st.empty()) r[i] = -1;
+        else r[i] = nums2[st.top()];
+        st.push(i);
+    }
+    
+    vector<int> res(nums1.size());
+    for (size_t i = 0; i < nums1.size(); i++)
+    {
+        res[i] = r[hp[nums1[i]]];
+    }
+    return res; 
+}
+```
+
+[灵神题解](https://leetcode.cn/problems/next-greater-element-i/solutions/2820648/shi-pin-dan-diao-zhan-de-liang-chong-xie-ri0i)，只能说灵神的思路还是强的，优化的思路受教了
+
+首先是可以哈希 `nums1` 然后再遍历 `nums2`
+- 从右往左遍历
+- 从左往右遍历
+
+从左往右遍历的关键在于：
+
+> 只要遍历到比栈顶元素更大的数，就意味着栈顶元素找到了答案，记录答案，并弹出栈顶。
