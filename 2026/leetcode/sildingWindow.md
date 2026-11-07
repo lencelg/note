@@ -363,3 +363,232 @@ int characterReplacement(string s, int k) {
 ````
 
 早上起来做了快两个小时，现在写完题解感觉人都累了，准备睡大觉
+
+## 239. 滑动窗口的最大值
+
+单调队列：这道题其实没有那么难，不要把自己的思路带偏就很好写了
+
+````cpp
+vector<int> maxSlidingWindow(vector<int>& nums, int k) {
+    deque<int> dq;
+    vector<int> result;
+
+    for (int i = 0; i < nums.size(); i++) {
+        if (!dq.empty() && dq.front() <= i - k) {
+            dq.pop_front();
+        }
+
+        while (!dq.empty() && nums[i] >= nums[dq.back()]) {
+            dq.pop_back();
+        }
+
+        dq.push_back(i);
+
+        if (i >= k - 1) {
+            result.push_back(nums[dq.front()]);
+        }
+    }
+    return result;
+}
+````
+
+## 567. 字符串的排列
+
+这道题的用例测试感觉比较轻松
+
+````cpp
+bool checkInclusion(string s1, string s2) {
+    unordered_map<char, int> hp;
+
+    for(char c : s1) hp[c]++;
+    size_t l = 0, n = s1.size(), m = s2.size();
+    for (size_t r = 0; r < m; r++)
+    {
+        if(hp.count(s2[r])) hp[s2[r]]--;
+
+        if((r - l + 1) < n){
+            continue;
+        }
+
+        bool good = true;
+        for(auto& [_, v]: hp){
+            if(v != 0)
+            {
+                good = false;
+                break;
+            }
+        }
+        if(good) return true;
+
+        if(hp.count(s2[l])) hp[s2[l]]++;
+        l++;
+    }
+    return false; 
+}
+````
+
+然后就是优化，每次判断窗口的时候只要在`s2[l]`在`s1`里面再判断
+
+````cpp
+bool checkInclusion(string s1, string s2) {
+    unordered_map<char, int> hp;
+
+    for(char c : s1) hp[c]++;
+
+    int l = 0, n = s1.size(), m = s2.size();
+
+    while(!hp.count(s2[l]) && l < m) l++;
+
+    for (int r = l; r < m; r++)
+    {
+        if(hp.count(s2[r])) hp[s2[r]]--;
+
+        if((r - l + 1) < n){
+            continue;
+        }
+
+        bool good = true;
+        for(auto& [_, v]: hp){
+            if(v != 0)
+            {
+                good = false;
+                break;
+            }
+        }
+        if(good) return true;
+
+        hp[s2[l]]++;
+        l++;
+
+        while(!hp.count(s2[l]) && l < m){
+            l++;
+        }
+    }
+    return false; 
+}
+````
+
+这里还是小写的英文字母，于是可以使用数组来代替哈希表，详细的代码看[灵神的本题题解](https://leetcode.cn/problems/permutation-in-string/solutions/3747426/ding-chang-hua-dong-chuang-kou-cong-o26n-ulxp)
+
+这里我就不写了。
+
+## 904. 水果成篮
+
+越长越合法
+
+````cpp
+int totalFruit(vector<int>& fruits) {
+    unordered_map<int, int> hp;
+    int l = 0, ans = 0;
+    for (int r = 0; r < fruits.size(); r++)
+    {
+        hp[fruits[r]]++;
+
+        while(hp.size() > 2){
+            if(--hp[fruits[l]] == 0) hp.erase(fruits[l]);
+            l++;
+        }
+
+        ans = max(ans, r - l + 1);
+    }
+    return ans;
+}
+````
+
+## 209. 长度最小的子数组
+
+这里需要注意更新`ans`的地方
+
+````cpp
+int minSubArrayLen(int target, vector<int>& nums) {
+    int sum = 0;
+    int l = 0, ans = numeric_limits<int>::max();
+    for (int r = 0; r < nums.size(); r++)
+    {
+        sum += nums[r];
+
+        if(sum < target) continue;
+
+        while(sum >= target)
+        {
+            ans = min(ans, r - l + 1);
+            sum -= nums[l];
+            l++;
+        }
+    }
+    return ans == numeric_limits<int>::max() ? 0 : ans;        
+}
+````
+
+[灵神题解有两种写法](https://leetcode.cn/problems/minimum-size-subarray-sum/solutions/1959532/biao-ti-xia-biao-zong-suan-cuo-qing-kan-k81nh)
+
+## 713. 乘积小于k的子数组
+
+````cpp
+int numSubarrayProductLessThanK(vector<int>& nums, int k) {
+        if(*min_element(nums.begin(), nums.end()) > k) return 0;
+
+        int ans = 0; 
+        int l = 0, cur = 1;
+        for (int r = 0; r < nums.size(); r++)
+        {
+            cur *= nums[r];
+
+            while(cur >= k){
+                cur /= nums[l];
+                l++;
+            }
+
+            ans += (r - l + 1);
+        }
+        return ans;        
+    }
+````
+
+小优化：一次遍历
+
+````cpp
+int numSubarrayProductLessThanK(vector<int>& nums, int k) {
+
+    int ans = 0; 
+    int l = 0, cur = 1;
+    for (int r = 0; r < nums.size(); r++)
+    {
+        cur *= nums[r];
+
+        while(cur >= k && l <= r){
+            cur /= nums[l];
+            l++;
+        }
+
+        ans += (r - l + 1);
+    }
+    return ans;        
+}
+````
+
+看了灵神的题解，灵神的题解对于没有数组符合要求的情形处理的更加优雅，[灵神题解链接](https://leetcode.cn/problems/subarray-product-less-than-k/solutions/1959538/xia-biao-zong-suan-cuo-qing-kan-zhe-by-e-jebq/)
+
+## 1004. 最大连续1的个数III
+
+没什么好说的，直接上代码
+
+````cpp
+int longestOnes(vector<int>& nums, int k) {
+    int ans = 0;
+    int l = 0;
+    for (int r = 0; r < nums.size(); r++)
+    {
+        k -= 1 - nums[r];
+
+        while(k < 0)
+        {
+            k += 1 - nums[l];
+            l++;
+        }
+
+        ans = max(ans, r - l + 1);
+    }
+    return ans;
+}
+````
