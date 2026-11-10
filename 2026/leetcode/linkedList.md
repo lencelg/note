@@ -295,3 +295,294 @@ ListNode* removeNthFromEnd(ListNode* head, int n) {
 ````
 
 看了[灵神的题解](https://leetcode.cn/problems/remove-nth-node-from-end-of-list/solutions/2004057/ru-he-shan-chu-jie-dian-liu-fen-zhong-ga-xpfs)才明白这里的小巧思是前后指针，感觉思维还是没有跟上
+
+## 138. 随机链表的复制
+
+这里很容易想到想建立一一对应的关系，于是可以使用哈希表来映射地址，空间$O(n)$，时间$O(n)$
+
+````cpp
+Node* copyRandomList(Node* head) {
+    Node* s = new Node(-1);        
+
+    Node* cur = s;
+    unordered_map<Node*, Node*> hp;
+
+    // copy list
+    Node* temp = head;
+    while(temp)
+    {
+        Node* new_node = new Node(temp->val);
+        cur->next = new_node;
+        cur = new_node;
+        hp[temp] = cur;
+        temp = temp->next;
+    }
+
+    // copy random pointer
+    cur = s->next;
+    temp = head;
+    while(cur)
+    {
+        if(hp.count(temp->random)) cur->random = hp[temp->random];
+        temp = temp->next;
+        cur = cur->next;
+    }
+
+    cur = s->next;
+
+    delete s;
+    return cur;
+}
+````
+
+于是考虑有无空间$O(1)$的做法，其实可以想到就是遍历到`random`的位置，于是就可以建立对应关系，这里顺带做了一点小优化
+
+时间$O(n^2)$，$n$代表链表的长度
+
+````cpp
+Node* copyRandomList(Node* head) {
+    if(!head) return nullptr;
+
+    Node* s = new Node(head->val);
+    Node* cur = s;
+
+    // copy list
+    Node* temp = head->next;
+    while(temp)
+    {
+        Node* new_node = new Node(temp->val);
+        cur->next = new_node;
+        cur = new_node;
+        temp = temp->next;
+    }
+
+    // find random pointer
+    auto f = [](Node* target, Node* start, Node* head) mutable {
+        while(head != target){
+            head = head->next;
+            start = start->next;
+        }
+        return start;
+    };
+
+    // copy random pointer
+    cur = s;
+    temp = head;
+    while(cur)
+    {
+        if(temp->random)
+        {
+            cur->random = f(temp->random, s, head);
+        }
+        temp = temp->next;
+        cur = cur->next;
+    }
+
+    return s;
+}
+````
+
+[灵神题解](https://leetcode.cn/problems/copy-list-with-random-pointer/solutions/2993775/bu-yong-ha-xi-biao-de-zuo-fa-pythonjavac-nzdo)，看了灵神的题解只剩下惊叹。
+
+灵神这里构建一一对应的关系十分巧妙，奇偶链表的思维，受教了
+
+## 2. 两数相加
+
+处理好进位然后代码简化一下
+
+````cpp
+ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+    bool carry = false;
+    ListNode* ans = new ListNode(0);
+    ListNode* cur = ans;
+    while(l1 && l2)
+    {
+        int sum = l1->val + l2->val;
+        if(carry) sum += 1;
+        carry = sum / 10;
+        ListNode* new_node = new ListNode(sum % 10); 
+        cur->next = new_node;
+        cur = new_node;
+        l1 = l1->next;
+        l2 = l2->next;
+    }
+
+    l1 = l1 ? l1 : l2;
+    while(l1)
+    {
+        int sum = l1->val;
+        if(carry) sum += 1;
+        carry = sum / 10;
+        ListNode* new_node = new ListNode(sum % 10); 
+        cur->next = new_node;
+        cur = new_node;
+        l1 = l1->next;
+    }
+
+    if(carry)
+    {
+        cur->next = new ListNode(1); 
+    }
+
+    cur = ans->next; 
+    delete ans;
+    return cur;
+}
+````
+
+[灵神题解](https://leetcode.cn/problems/add-two-numbers/solutions/2327008/dong-hua-jian-ji-xie-fa-cong-di-gui-dao-oe0di)，代码更加简洁
+
+## 146. LRU缓存
+
+双端链表加哈希
+
+````cpp
+struct Node{
+    int key;
+    int val;
+    Node* prev;
+    Node* next;
+    Node(int v, int k): val(v), key(k), next(nullptr), prev(nullptr){}
+    Node(int v, int k, Node* n, Node* p): val(v), key(k), next(n), prev(p){}
+};
+class LRUCache {
+public:
+    LRUCache(int capacity): _capacity(capacity), _size(0){
+        s = new Node(-1, -1);
+        end = s;
+        s->next = s, s->prev = s;
+    }
+    
+    int get(int key) {
+        if(!hp.count(key)) return -1;
+
+        Node* cur = hp[key];
+        if(cur != end){
+            cur->prev->next = cur->next;
+            cur->next->prev = cur->prev;
+
+            cur->prev = end;
+            cur->next = s;
+            end->next = cur;
+            end = cur;
+            s->prev = end;
+        }
+
+        return cur->val;
+    }
+    
+    void put(int key, int value) {
+        if(hp.count(key)){
+            Node* cur = hp[key];
+            cur->val = value;
+
+            if(cur != end){
+                cur->prev->next = cur->next;
+                cur->next->prev = cur->prev;
+
+                cur->prev = end;
+                cur->next = s;
+                end->next = cur;
+                end = cur;
+                s->prev = end;
+            }
+            return;
+        }
+        
+        Node* cur = new Node(value, key, s, end);
+        end->next = cur;
+        end = cur;
+        s->prev = end;
+
+        hp[key] = cur;
+        _size++;
+
+        if(_size > _capacity){
+            Node* nodeToDelete = s->next;
+            s->next = nodeToDelete->next;
+            nodeToDelete->next->prev = s;
+            hp.erase(nodeToDelete->key);
+            delete nodeToDelete;
+            _size--;
+        }
+    }
+    ~LRUCache(){
+        Node* cur = s->next;
+        while(cur != end){
+            Node* curToDelete = cur;
+            cur = cur->next;
+            delete curToDelete;
+        }
+        if(s != end) delete end;
+        delete s;
+    }
+private:
+    int _capacity;
+    int _size;
+    Node *s,*end;
+    unordered_map<int, Node*> hp;
+};
+````
+
+[灵神题解](https://leetcode.cn/problems/lru-cache/solutions/2456294/tu-jie-yi-zhang-tu-miao-dong-lrupythonja-czgt)，重点可以看一下标准库的写法
+
+## 25. k个一组的翻转链表
+
+翻转链表的变形题，思路很直接，主要是在写的时候小心一些
+
+````cpp
+class Solution {
+public:
+    ListNode* reverseKGroup(ListNode* head, int k) {
+        int count = 0;        
+        ListNode* dummy = new ListNode(-1, head);
+
+        ListNode* start = dummy, *end = dummy;
+        ListNode* nextGroupStart = nullptr;
+        
+        while(true){
+            // find one group
+            while(count < k && end){
+                end = end->next;
+                count++;
+            }
+
+            // end equals nullptr, requirements no statisfiy
+            if(!end) break;
+
+            // reverse this group
+            if(count == k){
+                nextGroupStart = end->next;
+
+                ListNode* temp = start->next;
+                reverseLinkedList(start->next, end);
+                start->next = end;
+                temp->next = nextGroupStart;
+                start = temp;
+                end = start;
+
+                count = 0;
+            } 
+        }
+
+        ListNode* ans = dummy->next; 
+        delete dummy;
+        return ans;
+    }
+private:
+    void reverseLinkedList(ListNode* start, ListNode* end){
+        if(start == end) return;
+        ListNode *prev, *cur, *next;
+        prev = start, cur = start->next, next = cur->next;
+        start->next = nullptr;
+        while(cur != end){
+            cur->next = prev;
+            prev = cur;
+            cur = next;
+            next = cur->next;
+        }
+        cur->next = prev;
+    }
+````
+
+[灵神题解](https://leetcode.cn/problems/reverse-nodes-in-k-group/solutions/1992228/you-xie-cuo-liao-yi-ge-shi-pin-jiang-tou-plfs)，灵神的题解依旧简洁有力，很值得学习如何简化自己的代码
