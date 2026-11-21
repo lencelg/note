@@ -112,7 +112,7 @@ int coinChange(vector<int> &coins, int amount) {
 
 修改后：
 
-```
+```cpp
 int coinChange(vector<int>& coins, int amount) {
     vector<int> dp(amount + 1, amount + 1);
     dp[0] = 0;
@@ -255,3 +255,336 @@ int lengthOfLIS(vector<int> &nums) {
 ````
 
 [灵神题解](https://leetcode.cn/problems/longest-increasing-subsequence/solutions/2147040/jiao-ni-yi-bu-bu-si-kao-dpfu-o1-kong-jia-4zma/)，这里灵神还有一个本地修改`nums`数组的方法，受教了
+
+## 139. 单词拆分
+
+处理好下标就行了
+
+````cpp
+bool wordBreak(string s, vector<string> &wordDict) {
+    int n = s.size();
+    vector<bool> dp(n, false);
+    for (int i = 0; i < n; i++) {
+        for (auto &word : wordDict) {
+            int size = word.size();
+            if (i - size + 1 == 0 || (i - size + 1 > 0 && dp[i - size])) {
+                if (s.substr(i - size + 1, size) == word) {
+                    dp[i] = true;
+                    break;
+                }
+            }
+        }
+    }
+    return dp[n - 1];
+}
+````
+
+deepseek c端优化：记忆化搜索，`dp`的思路有一点不同
+
+````cpp
+bool wordBreak(string s, vector<string>& wordDict) {
+    // 1. 用 unordered_set 存储字典，查找时间降到 O(1)
+    unordered_set<string> dict(wordDict.begin(), wordDict.end());
+    
+    int n = s.size();
+    // 2. 调整状态定义：dp[i] 表示 s 的前 i 个字符（即 s[0...i-1]）能否被成功拆分
+    // 大小设为 n + 1，dp[0] = true 表示空串可以被拆分
+    vector<bool> dp(n + 1, false);
+    dp[0] = true;
+
+    // 3. 记录字典中的最长单词长度，用于剪枝
+    int maxLen = 0;
+    for (const string& word : wordDict) {
+        maxLen = max(maxLen, (int)word.size());
+    }
+
+    // 4. 外层遍历前 i 个字符
+    for (int i = 1; i <= n; i++) {
+        // 内层从 i 前面最多 maxLen 个字符开始找
+        // 如果前面的长度 j 已经超过 maxLen，说明即使找到前缀也没用，直接跳过
+        for (int j = max(0, i - maxLen); j < i; j++) {
+            // 如果前 j 个字符能拆分，且截取的后半段在字典里
+            if (dp[j] && dict.count(s.substr(j, i - j))) {
+                dp[i] = true;
+                break; // 只要找到一种拆分方式即可跳出内层循环
+            }
+        }
+    }
+    
+    // 返回整个字符串 s 能否被拆分
+    return dp[n];
+}
+````
+
+[灵神题解](https://leetcode.cn/problems/word-break/solutions/2968135/jiao-ni-yi-bu-bu-si-kao-dpcong-ji-yi-hua-chrs)，灵神的最终版本和上面的DeepSeek优化思路一样的
+
+## 打家劫舍II
+
+> Since House[1] and House[n] are adjacent, they cannot be robbed together.
+> Therefore, the problem becomes to rob either House[1]-House[n-1]
+> or House[2]-House[n], depending on which choice offers more money.
+> Now the problem has degenerated to the House Robber, which is already been solved.
+
+- dp写法
+- 循环写法
+
+````cpp
+int rob(vector<int> &nums) {
+    int n = nums.size();
+    if (n == 1)
+        return nums[0];
+    vector<int> dp1(n);
+    dp1[0] = 0;
+    dp1[1] = nums[0];
+    for (int i = 2; i < n; i++) {
+        dp1[i] = max(dp1[i - 1], dp1[i - 2] + nums[i - 1]);
+    }
+
+    vector<int> dp2(n);
+    dp2[0] = 0;
+    dp2[1] = nums[1];
+    for (int i = 2; i < n; i++) {
+        dp2[i] = max(dp2[i - 1], dp2[i - 2] + nums[i]);
+    }
+    return max(dp1[n - 1], dp2[n - 1]);
+}
+````
+
+````cpp
+int rob(vector<int> &nums) {
+    int n = nums.size();
+    if (n == 1)
+        return nums[0];
+
+    int pre = 0, cur = nums[0], nxt = cur;
+    for (size_t i = 1; i < n - 1; i++) {
+        nxt = max(cur, pre + nums[i]);
+        pre = cur;
+        cur = nxt;
+    }
+    int ans = nxt;
+
+    pre = 0, cur = nums[1], nxt = cur;
+    for (size_t i = 2; i < n; i++) {
+        nxt = max(cur, pre + nums[i]);
+        pre = cur;
+        cur = nxt;
+    }
+    return max(ans, nxt);
+}
+````
+
+[题解页](https://leetcode.cn/problems/house-robber-ii/solutions/)
+
+## 91. 解码方法
+
+依旧两种写法
+
+- dp数组
+- 循环
+
+````cpp
+// 同样是DP数组，LeetCode上第一版的写法比二版的空间少0.3MB
+int numDecodings(string s) {
+    if(s[0] == '0') return 0;
+
+    int n = s.size();
+    if(n == 1) return 1;
+
+    vector<int> dp(n, 0);
+    dp[0] = 1;
+    if(s[1] != '0') dp[1] += dp[0];
+    if(s[0] == '1' || (s[0] == '2' && s[1] < '7')) dp[1]++;
+
+    for(int i = 2; i < n; i++){
+        if(s[i] != '0') dp[i] += dp[i - 1];
+        if(s[i - 1] == '1' || (s[i - 1] == '2' && s[i] < '7')) dp[i] += dp[i - 2];
+    }
+    return dp[n - 1];
+}
+
+int numDecodings(string s) {
+    int n = s.size();
+    if(s[0] == '0') return 0;
+    if(n == 1) return 1;
+
+    vector<int> dp(n + 1, 0);
+    dp[0] = 1;
+    dp[1] = 1;
+    for(int i = 2; i < n + 1; i++){
+        if(s[i - 1] != '0')
+            dp[i] += dp[i - 1];
+
+        if(s[i - 2] == '1' || (s[i - 2] == '2' && s[i - 1] < '7'))
+            dp[i] += dp[i - 2];
+    }
+    return dp[n];
+}
+````
+
+````cpp
+int numDecodings(string s) {
+    int n = s.size();
+    if(s[0] == '0') return 0;
+    if(n == 1) return 1;
+
+    int pre2 = 1, pre = 1, cur;
+    for(int i = 2; i < n + 1; i++){
+        cur = 0;
+        if(s[i - 1] != '0') cur += pre;
+        if(s[i - 2] == '1' || (s[i - 2] == '2' && s[i - 1] < '7')) cur += pre2;
+
+        int temp = pre;
+        pre = cur;
+        pre2 = temp;
+    }
+    return cur;
+}
+````
+
+## 5. 最长回文字串
+
+dp做法没想出来，正向做就写了
+
+正向做对每个当前的字符进行回文扩展
+
+````cpp
+string longestPalindrome(string s) {
+    int ansl = 0, ansr = 0;
+    int n = s.size();
+    for (int i = 0; i < n; i++) {
+
+        if ((n - i + 1) <= (ansr - ansl + 1) / 2)
+            break;
+
+        int l = i, r = i;
+        while (r + 1 < n && s[r + 1] == s[r])
+            r++;
+        while (l >= 0 && r < n && s[l] == s[r]) {
+            l--;
+            r++;
+        }
+
+        l++;
+        r--;
+
+        if (r - l + 1 > ansr - ansl + 1) {
+            ansl = l;
+            ansr = r;
+        }
+    }
+    return s.substr(ansl, ansr - ansl + 1);
+}
+````
+
+[题解页](https://leetcode.cn/problems/longest-palindromic-substring/solutions)，这里最优的解法是Manacher算法
+
+## 416. 分割等和子集
+
+败下阵来，能想到找集合总和的一半，这里的dp思路看了题解感觉不难但是自己想的时候没有思绪
+
+````cpp
+bool canPartition(vector<int> &nums) {
+    int t = accumulate(nums.begin(), nums.end(), 0);
+
+    if (t % 2)
+        return false;
+    t /= 2;
+
+    vector<bool> dp(t + 1, false);
+    dp[0] = true;
+
+    for (int num : nums) {
+        for (int j = t; j >= num; j--) {
+            dp[j] = dp[j] || dp[j - num];
+        }
+    }
+    return dp[t];
+}
+````
+
+优化：提前返回
+
+````cpp
+bool canPartition(vector<int> &nums) {
+    int t = accumulate(nums.begin(), nums.end(), 0);
+
+    if (t % 2)
+        return false;
+    t /= 2;
+
+    vector<bool> dp(t + 1, false);
+    dp[0] = true;
+
+    for (int num : nums) {
+
+        if(t >= num){
+            dp[t] = dp[t] || dp[t - num];
+            if(dp[t]) return true;
+        }
+
+        for (int j = t - 1; j >= num; j--) {
+            dp[j] = dp[j] || dp[j - num];
+        }
+    }
+    return false;
+}
+````
+
+[灵神题解](https://leetcode.cn/problems/partition-equal-subset-sum/solutions/2785266/0-1-bei-bao-cong-ji-yi-hua-sou-suo-dao-d-ev76)
+
+## 152. 乘积最大的子数组
+
+定义`dp[i]`为以`nums[i]`为结尾最大乘积和最小乘积的`pair`
+
+````cpp
+int maxProduct(vector<int> &nums) {
+    int n = nums.size();
+    // <max, min> pair
+    vector<pair<int, int>> dp(n + 1);
+    int ans = INT_MIN;
+    dp[0].first = 1, dp[0].second = 1;
+    for (int i = 1; i < n + 1; i++) {
+        int cur = nums[i - 1];
+
+        dp[i].first =
+            max({cur, dp[i - 1].first * cur, dp[i - 1].second * cur});
+        dp[i].second =
+            min({cur, dp[i - 1].first * cur, dp[i - 1].second * cur});
+
+        ans = max(ans, dp[i].first);
+    }
+    return ans;
+}
+````
+
+优化：把dp数组的更新写成循环
+
+````cpp
+int maxProduct(vector<int> &nums) {
+    int n = nums.size();
+    int ans = INT_MIN;
+    int curMax = 1, curMin = 1;
+    for (int i = 0; i < n; i++) {
+        int cur = nums[i];
+
+        int a = max({cur, curMax * cur, curMin * cur});
+        int b = min({cur, curMax * cur, curMin * cur});
+
+        curMax = a;
+        curMin = b;
+        ans = max(ans, curMax);
+    }
+    return ans;
+}
+````
+
+[灵神题解](https://leetcode.cn/problems/maximum-product-subarray/solutions/2968916/dong-tai-gui-hua-jian-ji-gao-xiao-python-i778)，dp的思路一样，灵神的写法三简化并小小优化了代码，受教了
+
+下面评论区还有悟道的：
+
+> 这道题让我突然想到，人生不能只在意高光时刻，低谷时刻也同样有价值。
+> 在乘积最大子数组里，f_min 记录的是当前最小乘积。它看起来像是低谷，但当它遇到一个负数时，反而可能翻转成最大的答案。
+> 这就像面试一样，一次面试失败，并不代表这段经历没有意义。它可能会变成后面某个高光时刻的前置状态。
+> 山重水复疑无路，柳暗花明又一村。
+> 低谷不是终点，它可能只是下一次翻转之前的状态。
